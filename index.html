@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>المتاهة - لا تبتعد</title>
+<title>مُراقب</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -331,6 +331,82 @@ canvas{
   background:rgba(0,30,60,.8)!important;
   border-color:rgba(68,136,255,.6)!important;
 }
+
+/* ── HORROR OVERLAY (grain + saturation boost) ── */
+#horrorGrain{
+  position:fixed;inset:0;pointer-events:none;z-index:11;opacity:0;
+  transition:opacity .4s;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay;
+}
+#horrorSat{
+  position:fixed;inset:0;pointer-events:none;z-index:10;opacity:0;
+  transition:opacity .4s;
+  background:radial-gradient(ellipse at center,rgba(80,0,0,0) 0%,rgba(120,0,0,.12) 70%,rgba(180,0,0,.22) 100%);
+  mix-blend-mode:multiply;
+}
+.settingToggle{
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;padding:10px 14px;transition:.2s;
+}
+.settingToggle:hover{background:rgba(255,255,255,.07);}
+.toggleSwitch{
+  width:38px;height:20px;border-radius:10px;background:rgba(255,255,255,.15);
+  position:relative;transition:.2s;flex-shrink:0;
+  border:1px solid rgba(255,255,255,.25);
+}
+.toggleSwitch.on{background:rgba(255,60,60,.6);border-color:rgba(255,80,80,.6);}
+.toggleSwitch::after{
+  content:'';position:absolute;top:2px;left:3px;width:14px;height:14px;
+  border-radius:50%;background:#fff;transition:.2s;
+}
+.toggleSwitch.on::after{left:calc(100% - 17px);}
+
+/* ── ROOM SEARCH PANEL ── */
+#roomSearchPanel{
+  position:fixed;inset:0;z-index:70;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.78);backdrop-filter:blur(4px);
+}
+#roomSearchBox{
+  width:min(440px,90vw);background:rgba(5,10,20,.96);
+  border:1px solid rgba(68,136,255,.4);border-radius:18px;
+  padding:24px 22px 20px;color:#f0f4ff;direction:rtl;text-align:right;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);max-height:80vh;overflow-y:auto;
+}
+#roomSearchBox h2{font-size:1.5em;margin-bottom:14px;color:#88bbff;text-align:center;letter-spacing:1px}
+#roomList{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.roomEntry{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(0,20,50,.7);border:1px solid rgba(68,136,255,.25);
+  border-radius:10px;padding:10px 14px;cursor:pointer;transition:.18s;
+}
+.roomEntry:hover{background:rgba(0,35,80,.85);border-color:rgba(68,136,255,.55);}
+.roomHostName{font-size:1.02em;font-weight:700;color:#cce0ff}
+.roomCode{font-size:.85em;color:#6688aa;letter-spacing:2px;font-family:monospace}
+.roomJoinBtn{
+  padding:6px 16px;background:linear-gradient(135deg,#0a2040,#050c1a);
+  border:1px solid rgba(68,136,255,.5);color:#88ccff;
+  border-radius:6px;cursor:pointer;font-size:.85em;font-family:inherit;
+  transition:.15s;
+}
+.roomJoinBtn:hover{background:linear-gradient(135deg,#163a70,#081a36);}
+#roomSearchStatus{color:#5577aa;font-size:.9em;text-align:center;margin:8px 0}
+
+/* ── SOLO LOBBY HUD ── */
+#soloLobbyHUD{
+  display:none;position:fixed;inset:0;z-index:30;
+}
+#soloLobbyHUD .startHint{
+  position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  background:rgba(0,10,30,.9);border:2px solid rgba(68,136,255,.7);
+  border-radius:14px;padding:16px 40px;text-align:center;
+  color:#88ccff;font-size:1.2em;letter-spacing:2px;
+  box-shadow:0 0 30px rgba(68,136,255,.3);
+  animation:blink 1.8s infinite;
+}
+
 </style>
 
 </head>
@@ -341,6 +417,36 @@ canvas{
 <div id="filmGrain"></div>
 <div id="eyeStrain"></div>
 <div id="blinkOverlay"></div>
+<div id="horrorGrain"></div>
+<div id="horrorSat"></div>
+
+<!-- ROOM SEARCH PANEL -->
+<div id="roomSearchPanel">
+  <div id="roomSearchBox">
+    <h2>🔍 بحث عن غرف عامة</h2>
+    <div id="roomSearchStatus">جاري البحث عن الغرف المتاحة...</div>
+    <div id="roomList"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
+      <button class="menuBtn" style="width:auto;padding:10px 22px" onclick="doRoomSearch()">🔄 تحديث</button>
+      <button class="menuBtn secondary" style="width:auto;padding:10px 22px" onclick="closeRoomSearch()">✕ إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOLO LOBBY HUD -->
+<div id="soloLobbyHUD">
+  <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none">
+    <div style="background:rgba(0,10,30,.9);border:1px solid rgba(68,136,255,.4);border-radius:12px;padding:10px 28px;backdrop-filter:blur(4px)">
+      <div style="color:#88aacc;font-size:.85em;letter-spacing:2px">👁 مُراقب</div>
+      <div style="color:#cce0ff;font-size:1.2em;font-weight:700;margin-top:4px">وضع فردي</div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:28px;right:14px">
+    <button onclick="exitSoloLobby()" style="padding:10px 18px;background:rgba(40,5,5,.7);border:1px solid rgba(255,60,60,.35);color:#ff8888;cursor:pointer;border-radius:8px;font-family:inherit;font-size:.9em">خروج ✕</button>
+  </div>
+  <div class="startHint">▶ اضغط ENTER لبدء اللعبة</div>
+  <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.28);font-size:.78em;text-align:center;pointer-events:none;white-space:nowrap">WASD للتجول · انقر على الشاشة للتحكم بالكاميرا</div>
+</div>
 
 <div id="objectivePanel">
   <div class="title">الهدف:</div>
@@ -359,8 +465,8 @@ canvas{
 
 <!-- SCREENS -->
 <div id="startScreen" class="screen">
-  <h1>☠ المتاهة ☠</h1>
-  <div class="tagline">— لا تبتعد عن النظر —</div>
+  <h1>👁 مُراقب</h1>
+  <div class="tagline">— هو يراقبك... دائماً —</div>
   <div class="rules">
     <span>🩸 وحش مظلم</span> يطاردك في الأروقة<br>
         <span>🔦 اضغط E</span> لتشغيل الكشاف<br>
@@ -373,7 +479,7 @@ canvas{
     🔋 كل 40 ثانية تفرغ بطارية · ابحث عن <span style="color:#80c8ff">الغرفة الآمنة</span> (زرقاء في الخريطة) · <span style="color:#44ffaa">المفتاح الأخضر</span> يفتح بابها
   </div>
   <div id="menuButtons">
-    <button class="menuBtn" onclick="startSolo()">🎮 لعب فردي</button>
+    <button class="menuBtn" onclick="startSoloLobby()">🎮 لعب فردي</button>
     <button class="menuBtn" style="background:linear-gradient(135deg,#0d1e3a,#050c1a);border-color:rgba(68,136,255,.35);color:#88bbff" onclick="showMpMenu()">👥 لعب جماعي</button>
     <button id="settingsBtn" class="menuBtn secondary" style="border-color:rgba(255,255,255,.12)" onclick="openSettings()">⚙ إعدادات</button>
   </div>
@@ -389,6 +495,15 @@ canvas{
     <div class="settingRow">
       <label for="sfxVolume"><span>صوت المؤثرات SFX</span><span id="sfxVolumeValue">70%</span></label>
       <input id="sfxVolume" type="range" min="0" max="100" value="70">
+    </div>
+    <div class="settingRow">
+      <div class="settingToggle" onclick="toggleHorrorEffects()">
+        <div style="flex:1">
+          <div style="font-size:1em;color:#efefef">🎞 تأثيرات الرعب (Grain + Saturation)</div>
+          <div style="font-size:.82em;color:#aaa;margin-top:3px">يضيف حبيبات وإشباع ألوان مرعب</div>
+        </div>
+        <div class="toggleSwitch" id="horrorToggle"></div>
+      </div>
     </div>
     <div class="settingHint">يمكنك خفض الموسيقى أو المؤثرات من هنا أثناء اللعب أو من القائمة الرئيسية.</div>
     <div class="settingActions">
@@ -420,6 +535,7 @@ canvas{
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;align-items:center;width:min(360px,88vw)">
     <button class="menuBtn" style="width:100%;background:linear-gradient(135deg,#0a2040,#050c1a);border-color:rgba(68,136,255,.45);color:#88bbff" onclick="mpClickCreatePublic()">🌐 إنشاء غرفة عامة</button>
     <button class="menuBtn" style="width:100%;background:linear-gradient(135deg,#1a0a20,#080510);border-color:rgba(180,68,255,.4);color:#cc88ff" onclick="mpClickCreatePrivate()">🔒 إنشاء غرفة خاصة</button>
+    <button class="menuBtn" style="width:100%;background:linear-gradient(135deg,#0a2018,#051008);border-color:rgba(68,255,136,.35);color:#88ffaa" onclick="openRoomSearch()">🔍 بحث عن غرف عامة</button>
     <div style="width:100%;display:flex;gap:8px;align-items:center">
       <input id="mpJoinCode" type="text" maxlength="6" placeholder="كود الغرفة" style="flex:1;padding:10px 10px;background:rgba(0,20,50,.85);border:1px solid rgba(68,136,255,.4);color:#fff;font-size:1.1em;border-radius:8px;font-family:inherit;text-align:center;text-transform:uppercase;letter-spacing:3px;outline:none">
       <button class="menuBtn" style="flex:0 0 90px;margin:0;padding:10px 0;border-color:rgba(68,136,255,.45);color:#88bbff;background:linear-gradient(135deg,#0a2040,#050c1a)" onclick="mpClickJoin()">انضم ←</button>
@@ -1111,7 +1227,205 @@ function makeDungeonTexture(kind='wall'){
   return tex;
 }
 
-// ══ BUILD SCENE ══
+// ══ PLAYER BODY TEXTURE ══
+function makePlayerBodyTexture(hexColor){
+  const c=document.createElement('canvas'); c.width=128; c.height=256;
+  const ctx=c.getContext('2d');
+  const r=(hexColor>>16)&0xff, g=(hexColor>>8)&0xff, b=hexColor&0xff;
+  // Base uniform color
+  ctx.fillStyle=`rgb(${r},${g},${b})`;
+  ctx.fillRect(0,0,128,256);
+  // Uniform pattern — collar
+  ctx.fillStyle=`rgba(0,0,0,.28)`;
+  ctx.fillRect(40,0,48,18);
+  // Belt
+  ctx.fillStyle=`rgba(0,0,0,.35)`;
+  ctx.fillRect(0,128,128,14);
+  // Pocket left
+  ctx.strokeStyle=`rgba(0,0,0,.4)`; ctx.lineWidth=2;
+  ctx.strokeRect(18,60,26,28);
+  ctx.fillStyle=`rgba(0,0,0,.18)`;
+  ctx.fillRect(19,61,24,26);
+  // Pocket right
+  ctx.strokeStyle=`rgba(0,0,0,.4)`;
+  ctx.strokeRect(84,60,26,28);
+  ctx.fillStyle=`rgba(0,0,0,.18)`;
+  ctx.fillRect(85,61,24,26);
+  // Seams
+  ctx.strokeStyle=`rgba(255,255,255,.14)`; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(64,0); ctx.lineTo(64,256); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,142); ctx.lineTo(128,142); ctx.stroke();
+  // Dark shading on sides
+  const grad=ctx.createLinearGradient(0,0,128,0);
+  grad.addColorStop(0,'rgba(0,0,0,.3)');
+  grad.addColorStop(0.15,'rgba(0,0,0,.0)');
+  grad.addColorStop(0.85,'rgba(0,0,0,.0)');
+  grad.addColorStop(1,'rgba(0,0,0,.3)');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,128,256);
+  const tex=new THREE.CanvasTexture(c);
+  tex.needsUpdate=true;
+  return tex;
+}
+
+function makePlayerHeadTexture(hexColor){
+  const c=document.createElement('canvas'); c.width=128; c.height=128;
+  const ctx=c.getContext('2d');
+  const r=(hexColor>>16)&0xff, g=(hexColor>>8)&0xff, b=hexColor&0xff;
+  ctx.fillStyle=`rgb(${Math.min(255,r+20)},${Math.min(255,g+20)},${Math.min(255,b+20)})`;
+  ctx.fillRect(0,0,128,128);
+  // Eyes
+  ctx.fillStyle='rgba(0,0,0,.7)';
+  ctx.beginPath(); ctx.arc(44,52,8,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(84,52,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  ctx.beginPath(); ctx.arc(46,50,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(86,50,3,0,Math.PI*2); ctx.fill();
+  // Mouth
+  ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(44,74); ctx.quadraticCurveTo(64,82,84,74); ctx.stroke();
+  const grad=ctx.createRadialGradient(64,64,10,64,64,64);
+  grad.addColorStop(0,'rgba(255,255,255,.0)');
+  grad.addColorStop(1,'rgba(0,0,0,.35)');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,128,128);
+  const tex=new THREE.CanvasTexture(c);
+  tex.needsUpdate=true;
+  return tex;
+}
+
+// ══ MAZE FURNITURE ══
+function buildMazeFurniture(){
+  const woodMat=new THREE.MeshLambertMaterial({color:0x3d2a15,emissive:0x060402});
+  const darkWoodMat=new THREE.MeshLambertMaterial({color:0x1e1208,emissive:0x020100});
+  const metalMat=new THREE.MeshLambertMaterial({color:0x1c1c1c,emissive:0x050505});
+  const paperMat=new THREE.MeshLambertMaterial({color:0xd8cdb0,emissive:0x050502});
+  const boardMat=new THREE.MeshLambertMaterial({color:0x0a1a0a,emissive:0x030803});
+  const chalkMat=new THREE.MeshBasicMaterial({color:0xccccaa});
+
+  const openCells=[];
+  for(let gz=2;gz<MS-2;gz++) for(let gx=2;gx<MS-2;gx++){
+    if(!grid[gz][gx] && !inSafeRoom(gx,gz)){
+      const d=Math.abs(gx-1)+Math.abs(gz-1);
+      if(d>4) openCells.push([gx,gz]);
+    }
+  }
+  shuffle(openCells);
+
+  let placed=0;
+  // ── Desks ──
+  for(let i=0;i<10&&placed<openCells.length;i++,placed++){
+    const [gx,gz]=openCells[placed];
+    const {x:wx,z:wz}=g2w(gx,gz);
+    const desk=new THREE.Group();
+    // Tabletop
+    const top=new THREE.Mesh(new THREE.BoxGeometry(1.4,.06,.7),woodMat);
+    top.position.y=0.88; desk.add(top);
+    // Legs
+    for(const[lx,lz] of[[-0.6,0.3],[0.6,0.3],[-0.6,-0.3],[0.6,-0.3]]){
+      const leg=new THREE.Mesh(new THREE.BoxGeometry(.06,.88,.06),darkWoodMat);
+      leg.position.set(lx,.44,lz); desk.add(leg);
+    }
+    // Paper on desk
+    if(Math.random()>.4){
+      const paper=new THREE.Mesh(new THREE.PlaneGeometry(.35,.45),paperMat);
+      paper.rotation.x=-Math.PI/2; paper.position.set((Math.random()-.5)*.5,.92,(Math.random()-.5)*.2);
+      desk.add(paper);
+    }
+    // Metal lamp sometimes
+    if(Math.random()>.6){
+      const lampBase=new THREE.Mesh(new THREE.CylinderGeometry(.04,.07,.06,8),metalMat);
+      lampBase.position.set(.4,.91,.1); desk.add(lampBase);
+      const lampPole=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.38,6),metalMat);
+      lampPole.position.set(.4,1.1,.1); desk.add(lampPole);
+      const shade=new THREE.Mesh(new THREE.ConeGeometry(.12,.14,8,1,true),new THREE.MeshLambertMaterial({color:0x2a2010,emissive:0x060500,side:THREE.DoubleSide}));
+      shade.position.set(.4,1.32,.1); desk.add(shade);
+    }
+    desk.rotation.y=Math.floor(Math.random()*4)*Math.PI/2;
+    desk.position.set(wx,0,wz);
+    scene.add(desk);
+  }
+
+  // ── Blackboards / Notice boards ──
+  for(let i=0;i<6&&placed<openCells.length;i++,placed++){
+    const [gx,gz]=openCells[placed];
+    const {x:wx,z:wz}=g2w(gx,gz);
+    const angle=Math.floor(Math.random()*4)*Math.PI/2;
+    const side=CS/2-.1;
+    const bx=wx+Math.sin(angle)*side, bz=wz+Math.cos(angle)*side;
+    const board=new THREE.Mesh(new THREE.BoxGeometry(1.4,.04,.9),boardMat);
+    board.rotation.set(0,angle+Math.PI/2,0);
+    board.position.set(bx,2.2,bz);
+    scene.add(board);
+    // Frame
+    const frameM=new THREE.MeshLambertMaterial({color:0x2a1d0e,emissive:0x060401});
+    for(const[fw,fh,fx,fy,fz,frx,fry] of [
+      [1.44,.06,.06, 0,2.65,bx,2.65,bz, 0,angle+Math.PI/2,0],
+      [1.44,.06,.06, 0,1.75,bx,1.75,bz, 0,angle+Math.PI/2,0],
+    ]){
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(fw,fh,.06),frameM);
+      fr.position.set(bx,fy,bz); fr.rotation.y=angle+Math.PI/2; scene.add(fr);
+    }
+    // Chalk writing texture
+    const cc=document.createElement('canvas'); cc.width=256; cc.height=160;
+    const cctx=cc.getContext('2d');
+    cctx.fillStyle='#0a1a0a'; cctx.fillRect(0,0,256,160);
+    cctx.font='18px monospace'; cctx.fillStyle='rgba(200,200,180,.6)';
+    const msgs=['⚠ لا تنظر!','البقاء هنا محظور','اهرب قبل الغروب','هو يراقبك','لا مخرج','إياك أن تبتعد'];
+    cctx.textAlign='center';
+    cctx.fillText(msgs[i%msgs.length],128,90);
+    const boardSurface=new THREE.Mesh(new THREE.PlaneGeometry(1.35,.86),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cc),transparent:true,side:THREE.DoubleSide}));
+    boardSurface.rotation.y=angle+Math.PI/2;
+    boardSurface.position.set(bx+Math.sin(angle+Math.PI/2)*.03,2.2,bz+Math.cos(angle+Math.PI/2)*.03);
+    scene.add(boardSurface);
+  }
+
+  // ── Filing cabinets ──
+  for(let i=0;i<5&&placed<openCells.length;i++,placed++){
+    const [gx,gz]=openCells[placed];
+    const {x:wx,z:wz}=g2w(gx,gz);
+    const cab=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.55,1.2,.45),metalMat);
+    body.position.y=0.6; cab.add(body);
+    for(let d=0;d<3;d++){
+      const drawer=new THREE.Mesh(new THREE.BoxGeometry(.5,.3,.02),new THREE.MeshLambertMaterial({color:0x252525,emissive:0x060606}));
+      drawer.position.set(0,.3+d*.36,.24); cab.add(drawer);
+      const handle=new THREE.Mesh(new THREE.BoxGeometry(.14,.03,.03),new THREE.MeshLambertMaterial({color:0x555555,emissive:0x0a0a0a}));
+      handle.position.set(0,.3+d*.36,.26); cab.add(handle);
+    }
+    cab.rotation.y=Math.random()*Math.PI*2;
+    cab.position.set(wx,0,wz);
+    scene.add(cab);
+  }
+
+  // ── Overturned chairs ──
+  for(let i=0;i<7&&placed<openCells.length;i++,placed++){
+    const [gx,gz]=openCells[placed];
+    const {x:wx,z:wz}=g2w(gx,gz);
+    const chair=new THREE.Group();
+    const seat=new THREE.Mesh(new THREE.BoxGeometry(.44,.05,.44),woodMat);
+    chair.add(seat);
+    const back=new THREE.Mesh(new THREE.BoxGeometry(.44,.54,.04),woodMat);
+    back.position.set(0,.3,-.2); chair.add(back);
+    for(const [lx,lz] of [[-0.18,.18],[.18,.18],[-.18,-.18],[.18,-.18]]){
+      const leg=new THREE.Mesh(new THREE.BoxGeometry(.04,.46,.04),darkWoodMat);
+      leg.position.set(lx,-.23,lz); chair.add(leg);
+    }
+    // Random tilt — some are fallen over
+    chair.rotation.set((Math.random()-.5)*1.4,Math.random()*Math.PI*2,(Math.random()-.5)*1.4);
+    chair.position.set(wx,.35+Math.random()*.2,wz);
+    scene.add(chair);
+  }
+
+  // ── Floor debris (scattered papers) ──
+  for(let i=0;i<14&&placed<openCells.length;i++,placed++){
+    const [gx,gz]=openCells[placed];
+    const {x:wx,z:wz}=g2w(gx,gz);
+    const paper=new THREE.Mesh(new THREE.PlaneGeometry(.28+Math.random()*.2,.36+Math.random()*.2),paperMat);
+    paper.rotation.set(-Math.PI/2+(Math.random()-.5)*.25,Math.random()*Math.PI*2,0);
+    paper.position.set(wx+(Math.random()-.5)*1.5,.015,wz+(Math.random()-.5)*1.5);
+    scene.add(paper);
+  }
+}
+
 // ══ BUILD SCENE ══
 function buildScene(){
   grid=genMaze();
@@ -1230,7 +1544,7 @@ function buildScene(){
   shackle.rotation.x=Math.PI/2;shackle.position.set(eWX,1.43,eWZ-CS*0.44);doorGroup.add(shackle);
   scene.add(doorGroup);
 
-  buildMonster();buildStatue();buildMinimap();buildKeys();buildBatteries();buildSafeRoom();buildSafeRoomDoor();buildGreenKey();unlockExitState();
+  buildMonster();buildStatue();buildMinimap();buildKeys();buildBatteries();buildSafeRoom();buildSafeRoomDoor();buildGreenKey();unlockExitState();buildMazeFurniture();
 }
 
 // ══ MONSTER ══
@@ -3098,15 +3412,21 @@ function mpUpdatePlayerMeshes(){
     if(!p.mesh){
       const col=PLAYER_COLORS[p.color%PLAYER_COLORS.length];
       const g=new THREE.Group();
-      const body=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,1.3,8), new THREE.MeshLambertMaterial({color:col,emissive:new THREE.Color(col).multiplyScalar(.08)}));
+      // Body with canvas texture
+      const bodyTex=makePlayerBodyTexture(col);
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,1.3,8), new THREE.MeshLambertMaterial({map:bodyTex,emissive:new THREE.Color(col).multiplyScalar(.05)}));
       body.position.y=0.65; g.add(body);
-      const head=new THREE.Mesh(new THREE.SphereGeometry(.2,8,6), new THREE.MeshLambertMaterial({color:col,emissive:new THREE.Color(col).multiplyScalar(.08)}));
+      const headTex=makePlayerHeadTexture(col);
+      const head=new THREE.Mesh(new THREE.SphereGeometry(.2,8,6), new THREE.MeshLambertMaterial({map:headTex,emissive:new THREE.Color(col).multiplyScalar(.05)}));
       head.position.y=1.5; g.add(head);
-      // Name tag
+      // Name tag — NO background, white text with outline
       const nc=document.createElement('canvas'); nc.width=256; nc.height=56;
       const nctx=nc.getContext('2d');
-      nctx.fillStyle='rgba(0,0,0,.72)'; nctx.fillRect(0,0,256,56);
-      nctx.fillStyle=PLAYER_COLORS_CSS[p.color%PLAYER_COLORS_CSS.length]; nctx.font='bold 26px Tahoma'; nctx.textAlign='center';
+      nctx.clearRect(0,0,256,56);
+      nctx.font='bold 26px Tahoma'; nctx.textAlign='center';
+      nctx.strokeStyle='rgba(0,0,0,.95)'; nctx.lineWidth=5;
+      nctx.strokeText(p.name.substring(0,12),128,38);
+      nctx.fillStyle='#ffffff';
       nctx.fillText(p.name.substring(0,12),128,38);
       const nt=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.28), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc),transparent:true,side:THREE.DoubleSide,depthWrite:false}));
       nt.position.y=2.0; nt.name='nameTag'; g.add(nt);
@@ -3206,6 +3526,8 @@ function showLobbyScreen(){
   // Bind lobby controls
   bindLobbyControls();
   lobbyLoop();
+  // Register with public room registry if applicable
+  if(MP.isPublic&&MP.isHost){ setTimeout(mpRegisterPublicRoom,1200); }
 }
 
 function hideLobbyScreen(){
@@ -3267,36 +3589,38 @@ function buildLobbyScene(){
 
   const s=MP.lobbyScene;
 
-  // Lights
-  s.add(new THREE.AmbientLight(0x112233,.9));
-  const centerLight=new THREE.PointLight(0x2255aa,.7,18);
+  // Lights — VERY bright so players can actually see
+  s.add(new THREE.AmbientLight(0xffffff, 3.5));
+  const centerLight=new THREE.PointLight(0x88aaff, 5.0, 28);
   centerLight.position.set(0,4,0); s.add(centerLight);
-  // Torch sconces around room
-  for(let i=0;i<6;i++){
-    const a=i/6*Math.PI*2;
-    const tl=new THREE.PointLight(0xffaa55,.5,9);
+  const centerLight2=new THREE.PointLight(0xffffff, 3.0, 20);
+  centerLight2.position.set(0,1.5,0); s.add(centerLight2);
+  // Torch sconces around room — bright warm torches
+  for(let i=0;i<8;i++){
+    const a=i/8*Math.PI*2;
+    const tl=new THREE.PointLight(0xffcc66, 4.5, 14);
     tl.position.set(Math.cos(a)*9,2.2,Math.sin(a)*9); s.add(tl);
   }
 
   // Floor (hexagonal tiles look)
-  const floorMat=new THREE.MeshLambertMaterial({color:0x080e18});
+  const floorMat=new THREE.MeshLambertMaterial({color:0x1a2535});
   const floor=new THREE.Mesh(new THREE.CircleGeometry(13,32),floorMat);
   floor.rotation.x=-Math.PI/2; s.add(floor);
   // Inner glow circle
-  const innerFloor=new THREE.Mesh(new THREE.CircleGeometry(3,.32),new THREE.MeshLambertMaterial({color:0x0a1a30,emissive:0x020a1a}));
+  const innerFloor=new THREE.Mesh(new THREE.CircleGeometry(3,.32),new THREE.MeshLambertMaterial({color:0x1a3050,emissive:0x051428}));
   innerFloor.rotation.x=-Math.PI/2; innerFloor.position.y=.01; s.add(innerFloor);
 
   // Outer wall
   const wallGeo=new THREE.CylinderGeometry(13,13,5.5,24,1,true);
-  const wallMat=new THREE.MeshLambertMaterial({color:0x060d16,side:THREE.BackSide});
+  const wallMat=new THREE.MeshLambertMaterial({color:0x1a2030,side:THREE.BackSide});
   const wall=new THREE.Mesh(wallGeo,wallMat); wall.position.y=2.75; s.add(wall);
 
   // Ceiling with subtle pattern
-  const ceil=new THREE.Mesh(new THREE.CircleGeometry(13,32),new THREE.MeshLambertMaterial({color:0x040810}));
+  const ceil=new THREE.Mesh(new THREE.CircleGeometry(13,32),new THREE.MeshLambertMaterial({color:0x0d1520}));
   ceil.rotation.x=Math.PI/2; ceil.position.y=5.5; s.add(ceil);
 
   // Central pillar glow
-  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,5,12),new THREE.MeshLambertMaterial({color:0x112233,emissive:0x0a1a2a}));
+  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,5,12),new THREE.MeshLambertMaterial({color:0x223355,emissive:0x0f1e3a}));
   pillar.position.y=2.5; s.add(pillar);
 
   // Portal ring at top of pillar
@@ -3327,13 +3651,16 @@ function buildLobbyScene(){
   const waitSign=new THREE.Mesh(new THREE.PlaneGeometry(3,.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(waitCanvas),transparent:true,side:THREE.DoubleSide}));
   waitSign.position.set(0,2.8,0); s.add(waitSign);
 
-  // Torch sconces (visual)
-  for(let i=0;i<6;i++){
-    const a=i/6*Math.PI*2;
-    const torch=new THREE.Mesh(new THREE.BoxGeometry(.15,.6,.15),new THREE.MeshLambertMaterial({color:0x1a1008}));
+  // Torch sconces (visual) — bright and warm
+  for(let i=0;i<8;i++){
+    const a=i/8*Math.PI*2;
+    const torch=new THREE.Mesh(new THREE.BoxGeometry(.15,.6,.15),new THREE.MeshLambertMaterial({color:0x3a2010}));
     torch.position.set(Math.cos(a)*10.5,1.8,Math.sin(a)*10.5); s.add(torch);
-    const flame=new THREE.Mesh(new THREE.SphereGeometry(.12,6,4),new THREE.MeshBasicMaterial({color:0xff8822}));
-    flame.position.set(Math.cos(a)*10.5,2.4,Math.sin(a)*10.5); s.add(flame);
+    const flame=new THREE.Mesh(new THREE.SphereGeometry(.16,6,4),new THREE.MeshBasicMaterial({color:0xff8822}));
+    flame.position.set(Math.cos(a)*10.5,2.45,Math.sin(a)*10.5); s.add(flame);
+    // Extra inner glow sphere
+    const glow2=new THREE.Mesh(new THREE.SphereGeometry(.08,6,4),new THREE.MeshBasicMaterial({color:0xffff00}));
+    glow2.position.set(Math.cos(a)*10.5,2.38,Math.sin(a)*10.5); s.add(glow2);
   }
 
   // Place existing lobby avatars
@@ -3355,16 +3682,20 @@ function updateLobbyAvatars(){
     if(MP.lobbyAvatars[pid]) return; // already created
     const col=PLAYER_COLORS[p.color%PLAYER_COLORS.length];
     const g=new THREE.Group();
-    const body=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,1.35,8),new THREE.MeshLambertMaterial({color:col,emissive:new THREE.Color(col).multiplyScalar(.06)}));
+    const bodyTex2=makePlayerBodyTexture(col);
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,1.35,8),new THREE.MeshLambertMaterial({map:bodyTex2,emissive:new THREE.Color(col).multiplyScalar(.04)}));
     body.position.y=0.68; g.add(body);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.21,8,6),new THREE.MeshLambertMaterial({color:col,emissive:new THREE.Color(col).multiplyScalar(.06)}));
+    const headTex2=makePlayerHeadTexture(col);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.21,8,6),new THREE.MeshLambertMaterial({map:headTex2,emissive:new THREE.Color(col).multiplyScalar(.04)}));
     head.position.y=1.58; g.add(head);
-    // Name tag
+    // Name tag — NO background, white text
     const nc=document.createElement('canvas'); nc.width=256; nc.height=58;
     const nctx=nc.getContext('2d');
-    nctx.fillStyle='rgba(0,5,20,.75)'; nctx.fillRect(0,0,256,58);
-    nctx.fillStyle=PLAYER_COLORS_CSS[p.color%PLAYER_COLORS_CSS.length];
+    nctx.clearRect(0,0,256,58);
     nctx.font='bold 26px Tahoma'; nctx.textAlign='center';
+    nctx.strokeStyle='rgba(0,0,0,.95)'; nctx.lineWidth=5;
+    nctx.strokeText(p.name.substring(0,12),128,40);
+    nctx.fillStyle='#ffffff';
     nctx.fillText(p.name.substring(0,12),128,40);
     const nt=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.3),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc),transparent:true,side:THREE.DoubleSide}));
     nt.position.y=2.08; nt.name='nametag'; g.add(nt);
@@ -3409,6 +3740,19 @@ function lobbyLoop(ts=0){
   // Rotate ring
   const ring=MP.lobbyScene.getObjectByName('lobbyRing');
   if(ring){ ring.rotation.y+=dt*.8; ring.rotation.z=Math.sin(ts*.001)*.3; }
+
+  // Pulse solo start sign glow
+  const signGlow=MP.lobbyScene.getObjectByName('signGlow');
+  if(signGlow){ signGlow.intensity=3.0+Math.sin(ts*.003)*1.5; }
+
+  // Enter key in solo lobby mode
+  if(!MP.isHost&&!MP.enabled&&MP.roomCode==='SOLO'){
+    if(keys['Enter']&&!_soloLobbyEnterHeld){
+      _soloLobbyEnterHeld=true;
+      _launchFromSoloLobby();
+      return;
+    }
+  }
 
   // Send lobby position
   MP.syncTimer-=dt;
@@ -3486,11 +3830,319 @@ function mpLeaveLobby(){
   document.getElementById('startScreen').style.display='flex';
 }
 
+// ══ HORROR EFFECTS (Grain + Saturation) ══
+let horrorEffectsOn=false;
+function toggleHorrorEffects(){
+  horrorEffectsOn=!horrorEffectsOn;
+  const toggle=document.getElementById('horrorToggle');
+  const grain=document.getElementById('horrorGrain');
+  const sat=document.getElementById('horrorSat');
+  const canvas=document.getElementById('c');
+  if(toggle) toggle.classList.toggle('on',horrorEffectsOn);
+  if(grain) grain.style.opacity=horrorEffectsOn?'0.18':'0';
+  if(sat) sat.style.opacity=horrorEffectsOn?'1':'0';
+  if(canvas){
+    canvas.style.filter=horrorEffectsOn
+      ? 'contrast(1.22) brightness(.52) saturate(1.45)'
+      : 'contrast(1.02) brightness(.56) saturate(.32)';
+  }
+  if(horrorEffectsOn && !_horrorAnimId) _startHorrorAnim();
+  else if(!horrorEffectsOn && _horrorAnimId){ cancelAnimationFrame(_horrorAnimId); _horrorAnimId=null; }
+}
+let _horrorAnimId=null;
+function _startHorrorAnim(){
+  function tick(){
+    if(!horrorEffectsOn){ _horrorAnimId=null; return; }
+    const grain=document.getElementById('horrorGrain');
+    const canvas=document.getElementById('c');
+    // Subtle grain flicker
+    if(grain) grain.style.opacity=(0.12+Math.random()*0.12).toFixed(3);
+    // Occasional saturation pulse
+    if(canvas && Math.random()<0.04){
+      const boost=1.45+Math.random()*0.8;
+      canvas.style.filter=`contrast(${1.18+Math.random()*.18}) brightness(.5) saturate(${boost})`;
+    }
+    _horrorAnimId=requestAnimationFrame(tick);
+  }
+  _horrorAnimId=requestAnimationFrame(tick);
+}
+
+// ══ SOLO LOBBY MODE ══
+let _soloLobbyEnterHeld=false;
+function startSoloLobby(){
+  MP.enabled=false;
+  MP.isHost=false;
+  MP.roomCode='SOLO';
+  MP.localName='أنت';
+  MP.players={};
+  const myId='solo-player';
+  MP.players[myId]={name:'أنت',color:0,x:0,y:PH,z:0,yaw:0,isLocal:true,dead:false,won:false,lobbyX:0,lobbyZ:3};
+  // Hide start screen, show solo lobby HUD
+  document.getElementById('startScreen').style.display='none';
+  document.getElementById('soloLobbyHUD').style.display='block';
+  // Build lobby scene (reuse same function, no room code sign needed)
+  buildLobbySceneSolo();
+  MP.lobbyActive=true;
+  bindLobbyControls();
+  lobbyLoop();
+  // Listen for Enter key to start game
+  document.addEventListener('keydown',_soloLobbyKeyHandler);
+}
+
+function buildLobbySceneSolo(){
+  const canvas=document.getElementById('c');
+  if(!renderer){
+    renderer=new THREE.WebGLRenderer({canvas,antialias:false});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,.6));
+    renderer.setSize(innerWidth,innerHeight);
+  }
+  MP.lobbyScene=new THREE.Scene();
+  MP.lobbyScene.background=new THREE.Color(0x04080f);
+  MP.lobbyScene.fog=new THREE.FogExp2(0x04080f,.028);
+  MP.lobbyCam=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.05,80);
+  MP.lobbyCam.rotation.order='YXZ';
+  MP.lobbyCam.position.set(0,1.65,3);
+  MP.lobbyCam.rotation.y=Math.PI;
+  const s=MP.lobbyScene;
+  // Very bright lighting
+  s.add(new THREE.AmbientLight(0xffffff,3.5));
+  const cL=new THREE.PointLight(0x88aaff,5.0,28);
+  cL.position.set(0,4,0); s.add(cL);
+  const cL2=new THREE.PointLight(0xffffff,3.0,20);
+  cL2.position.set(0,1.5,0); s.add(cL2);
+  for(let i=0;i<8;i++){
+    const a=i/8*Math.PI*2;
+    const tl=new THREE.PointLight(0xffcc66,4.5,14);
+    tl.position.set(Math.cos(a)*9,2.2,Math.sin(a)*9); s.add(tl);
+  }
+  // Floor
+  const floorMat=new THREE.MeshLambertMaterial({color:0x1a2535});
+  s.add(Object.assign(new THREE.Mesh(new THREE.CircleGeometry(13,32),floorMat),{rotation:{x:-Math.PI/2,y:0,z:0,order:'XYZ'}}));
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(13,32),floorMat);
+  floor.rotation.x=-Math.PI/2; s.add(floor);
+  // Wall
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(13,13,5.5,24,1,true),new THREE.MeshLambertMaterial({color:0x1a2030,side:THREE.BackSide}));
+  wall.position.y=2.75; s.add(wall);
+  // Ceiling
+  const ceil=new THREE.Mesh(new THREE.CircleGeometry(13,32),new THREE.MeshLambertMaterial({color:0x0d1520}));
+  ceil.rotation.x=Math.PI/2; ceil.position.y=5.5; s.add(ceil);
+  // Pillar
+  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,5,12),new THREE.MeshLambertMaterial({color:0x223355,emissive:0x0f1e3a}));
+  pillar.position.y=2.5; s.add(pillar);
+  // Ring
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.8,.05,8,24),new THREE.MeshBasicMaterial({color:0x3366ff}));
+  ring.position.y=4.8; ring.name='lobbyRing'; s.add(ring);
+  // Torches
+  for(let i=0;i<6;i++){
+    const a=i/6*Math.PI*2;
+    const torch=new THREE.Mesh(new THREE.BoxGeometry(.15,.6,.15),new THREE.MeshLambertMaterial({color:0x3a2010}));
+    torch.position.set(Math.cos(a)*10.5,1.8,Math.sin(a)*10.5); s.add(torch);
+    const flame=new THREE.Mesh(new THREE.SphereGeometry(.12,6,4),new THREE.MeshBasicMaterial({color:0xff8822}));
+    flame.position.set(Math.cos(a)*10.5,2.4,Math.sin(a)*10.5); s.add(flame);
+  }
+  // START GAME sign at end of hall
+  const sc2=document.createElement('canvas'); sc2.width=512; sc2.height=160;
+  const sctx=sc2.getContext('2d');
+  sctx.fillStyle='rgba(0,10,30,.92)'; sctx.fillRect(0,0,512,160);
+  sctx.strokeStyle='rgba(68,136,255,.8)'; sctx.lineWidth=4; sctx.strokeRect(4,4,504,152);
+  sctx.font='bold 52px Tahoma'; sctx.fillStyle='#88ccff'; sctx.textAlign='center';
+  sctx.fillText('▶ ابدأ اللعبة',256,80);
+  sctx.font='22px Tahoma'; sctx.fillStyle='rgba(100,160,220,.7)';
+  sctx.fillText('اضغط ENTER',256,124);
+  const startSign=new THREE.Mesh(new THREE.PlaneGeometry(5.5,1.75),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc2),transparent:true,side:THREE.DoubleSide}));
+  startSign.position.set(0,2.0,-9); startSign.name='soloStartSign'; s.add(startSign);
+  // Glow around sign
+  const signGlow=new THREE.PointLight(0x4488ff,3.5,7);
+  signGlow.position.set(0,2.0,-9); signGlow.name='signGlow'; s.add(signGlow);
+  MP.lobbyAvatars={};
+  window.addEventListener('resize',()=>{
+    if(MP.lobbyActive&&MP.lobbyCam){ MP.lobbyCam.aspect=innerWidth/innerHeight; MP.lobbyCam.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+  });
+}
+
+function _soloLobbyKeyHandler(e){
+  if(e.code==='Enter'&&!_soloLobbyEnterHeld){
+    _soloLobbyEnterHeld=true;
+    document.removeEventListener('keydown',_soloLobbyKeyHandler);
+    _launchFromSoloLobby();
+  }
+}
+function _launchFromSoloLobby(){
+  document.getElementById('soloLobbyHUD').style.display='none';
+  MP.lobbyActive=false;
+  if(MP.lobbyAnimId){ cancelAnimationFrame(MP.lobbyAnimId); MP.lobbyAnimId=null; }
+  MP.enabled=false;
+  startGame();
+}
+function exitSoloLobby(){
+  _soloLobbyEnterHeld=false;
+  document.removeEventListener('keydown',_soloLobbyKeyHandler);
+  MP.lobbyActive=false;
+  if(MP.lobbyAnimId){ cancelAnimationFrame(MP.lobbyAnimId); MP.lobbyAnimId=null; }
+  document.getElementById('soloLobbyHUD').style.display='none';
+  document.getElementById('startScreen').style.display='flex';
+  if(renderer && MP.lobbyScene){ renderer.render(MP.lobbyScene,MP.lobbyCam); }
+}
+
+// Add Enter key listener in lobby loop for solo mode
+const _origLobbyLoop_ref=lobbyLoop;
+
+// ══ ROOM SEARCH / DISCOVERY ══
+// Public room registry via a well-known PeerJS ID
+const REGISTRY_ID='hm25-PUBREGISTRY1';
+let _registryConn=null;
+let _registryPeer=null; // if we ARE the registry
+
+function openRoomSearch(){
+  document.getElementById('roomSearchPanel').style.display='flex';
+  document.getElementById('roomList').innerHTML='';
+  document.getElementById('roomSearchStatus').textContent='جاري البحث...';
+  doRoomSearch();
+}
+function closeRoomSearch(){
+  document.getElementById('roomSearchPanel').style.display='none';
+  if(_registryConn){ try{_registryConn.close();}catch(e){} _registryConn=null; }
+}
+
+function doRoomSearch(){
+  document.getElementById('roomSearchStatus').textContent='⏳ يتصل بالسجل...';
+  document.getElementById('roomList').innerHTML='';
+  loadPeerJS(()=>{
+    const searchPeer=new Peer(null);
+    searchPeer.on('open',()=>{
+      const conn=searchPeer.connect(REGISTRY_ID,{reliable:true});
+      let gotReply=false;
+      conn.on('open',()=>{
+        conn.send({type:'queryRooms'});
+      });
+      conn.on('data',(data)=>{
+        if(data.type==='roomList'){
+          gotReply=true;
+          displayRoomList(data.rooms);
+          conn.close(); searchPeer.destroy();
+        }
+      });
+      conn.on('error',()=>{
+        if(!gotReply){ document.getElementById('roomSearchStatus').textContent='لا توجد غرف عامة متاحة الآن'; }
+        searchPeer.destroy();
+      });
+      setTimeout(()=>{
+        if(!gotReply){
+          document.getElementById('roomSearchStatus').textContent='لا توجد غرف عامة الآن. كن أول هوست!';
+          try{conn.close(); searchPeer.destroy();}catch(e){}
+        }
+      },5000);
+    });
+    searchPeer.on('error',()=>{
+      document.getElementById('roomSearchStatus').textContent='فشل البحث. تحقق من الاتصال.';
+    });
+  });
+}
+
+function displayRoomList(rooms){
+  const listEl=document.getElementById('roomList');
+  const statusEl=document.getElementById('roomSearchStatus');
+  listEl.innerHTML='';
+  if(!rooms||rooms.length===0){
+    statusEl.textContent='لا توجد غرف عامة متاحة الآن';
+    return;
+  }
+  statusEl.textContent=`وُجد ${rooms.length} غرفة عامة:`;
+  rooms.forEach(rm=>{
+    const div=document.createElement('div');
+    div.className='roomEntry';
+    div.innerHTML=`
+      <div>
+        <div class="roomHostName">👑 ${rm.hostName||'هوست'}</div>
+        <div class="roomCode">${rm.code}</div>
+        <div style="font-size:.78em;color:#446688;margin-top:2px">${rm.playerCount||1} لاعب</div>
+      </div>
+      <button class="roomJoinBtn" onclick="joinRoomFromSearch('${rm.code}')">انضم ←</button>
+    `;
+    listEl.appendChild(div);
+  });
+}
+
+function joinRoomFromSearch(code){
+  closeRoomSearch();
+  const inp=document.getElementById('mpJoinCode');
+  if(inp) inp.value=code;
+  document.getElementById('mpMenuScreen').style.display='flex';
+  // Auto-join
+  const mpNameInp=document.getElementById('mpNameInput');
+  if(!mpNameInp?.value?.trim()) mpNameInp.value='لاعب';
+  showMpLoading('⏳ جاري الاتصال...');
+  loadPeerJS(()=> mpJoinRoom(code));
+}
+
+// ── Registry management (for public room hosts) ──
+let _registryRooms={};  // roomCode → {hostName, playerCount, ts}
+let _isRegistryHost=false;
+let _myRegistryConn=null;
+
+function mpRegisterPublicRoom(){
+  if(!MP.isPublic||!MP.isHost) return;
+  loadPeerJS(()=>{
+    // Try to connect to existing registry
+    const tempPeer=new Peer(null);
+    tempPeer.on('open',(tid)=>{
+      const conn=tempPeer.connect(REGISTRY_ID,{reliable:true});
+      conn.on('open',()=>{
+        conn.send({type:'register',code:MP.roomCode,hostName:MP.localName,playerCount:Object.keys(MP.players).length});
+        _myRegistryConn=conn;
+        // Keep alive with periodic updates
+        setInterval(()=>{
+          if(_myRegistryConn&&_myRegistryConn.open) _myRegistryConn.send({type:'update',code:MP.roomCode,playerCount:Object.keys(MP.players).length});
+        },15000);
+      });
+      conn.on('error',()=>{
+        // No registry exists — become the registry
+        tempPeer.destroy();
+        _becomeRegistry();
+      });
+      setTimeout(()=>{ if(!_myRegistryConn){ try{tempPeer.destroy();}catch(e){} _becomeRegistry(); } },3500);
+    });
+    tempPeer.on('error',()=>{});
+  });
+}
+
+function _becomeRegistry(){
+  _isRegistryHost=true;
+  _registryRooms={};
+  // Register own room
+  _registryRooms[MP.roomCode]={hostName:MP.localName,playerCount:Object.keys(MP.players).length,ts:Date.now()};
+  const regPeer=new Peer(REGISTRY_ID);
+  regPeer.on('open',()=>{
+    _registryPeer=regPeer;
+  });
+  regPeer.on('connection',(conn)=>{
+    conn.on('data',(data)=>{
+      if(data.type==='register'){
+        _registryRooms[data.code]={hostName:data.hostName,playerCount:data.playerCount,ts:Date.now()};
+      } else if(data.type==='update'){
+        if(_registryRooms[data.code]) _registryRooms[data.code].playerCount=data.playerCount;
+      } else if(data.type==='queryRooms'){
+        // Clean stale rooms (>2 min)
+        const now=Date.now();
+        Object.keys(_registryRooms).forEach(k=>{ if(now-_registryRooms[k].ts>120000) delete _registryRooms[k]; });
+        conn.send({type:'roomList',rooms:Object.entries(_registryRooms).map(([code,rm])=>({code,...rm}))});
+      } else if(data.type==='unregister'){
+        delete _registryRooms[data.code];
+      }
+    });
+    conn.on('close',()=>{});
+  });
+  regPeer.on('error',()=>{});
+}
+
+
 // Update start hint when player count changes
 function updateMpPlayerCount(){
   updateMpStartHint();
   updateLobbyPlayerList();
 }
+
+
 
 </script>
 </body>
