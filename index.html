@@ -3990,18 +3990,8 @@ function startSoloLobby(){
   MP.roomCode='SOLO';
   MP.localName='أنت';
   MP.players={};
-  const myId='solo-player';
-  MP.players[myId]={name:'أنت',color:0,x:0,y:PH,z:0,yaw:0,isLocal:true,dead:false,won:false,lobbyX:0,lobbyZ:3};
-  // Hide start screen, show solo lobby HUD
   document.getElementById('startScreen').style.display='none';
-  document.getElementById('soloLobbyHUD').style.display='block';
-  // Build lobby scene (reuse same function, no room code sign needed)
-  buildLobbySceneSolo();
-  MP.lobbyActive=true;
-  bindLobbyControls();
-  lobbyLoop();
-  // Listen for Enter key to start game
-  document.addEventListener('keydown',_soloLobbyKeyHandler);
+  startGame();
 }
 
 function buildLobbySceneSolo(){
