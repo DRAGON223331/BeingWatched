@@ -410,7 +410,7 @@ canvas{
 #horrorSat{
   position:fixed;inset:0;pointer-events:none;z-index:10;opacity:0;
   transition:opacity .4s;
-  background:radial-gradient(ellipse at center,rgba(80,0,0,0) 0%,rgba(120,0,0,.12) 70%,rgba(180,0,0,.22) 100%);
+  background:radial-gradient(ellipse at center,rgba(80,0,0,0) 0%,rgba(120,0,0,.06) 70%,rgba(180,0,0,.10) 100%);
   mix-blend-mode:multiply;
 }
 .settingToggle{
@@ -461,6 +461,26 @@ canvas{
 }
 .roomJoinBtn:hover{background:linear-gradient(135deg,#163a70,#081a36);}
 #roomSearchStatus{color:#5577aa;font-size:.9em;text-align:center;margin:8px 0}
+
+/* ── MINECRAFT JOIN MESSAGES ── */
+#mcChatLog{
+  position:fixed;bottom:110px;left:14px;z-index:30;
+  display:flex;flex-direction:column;gap:3px;pointer-events:none;
+}
+.mcJoinMsg{
+  display:inline-block;
+  background:rgba(0,0,0,0.55);
+  color:#ffff55;
+  font-family:'Courier New',monospace;
+  font-size:1.02em;letter-spacing:.5px;
+  padding:3px 8px 3px 7px;
+  border-left:2px solid rgba(255,255,85,.35);
+  text-shadow:1px 1px 0 rgba(63,63,0,.9);
+  max-width:min(380px,60vw);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+  opacity:1;transition:opacity 1.2s ease;
+}
+.mcJoinMsg.fade{opacity:0;}
 
 /* ── SOLO LOBBY HUD ── */
 #soloLobbyHUD{
@@ -641,17 +661,34 @@ canvas{
 <!-- ══ LOBBY COMPUTER PROMPT ══ -->
 <div id="lobbyComputerPrompt">⌨ اضغط F لفتح الكمبيوتر</div>
 
-<!-- ══ LOBBY COMPUTER PANEL (host only) ══ -->
+<!-- ══ LOBBY COMPUTER PANEL ══ -->
 <div id="lobbyComputerPanel" style="display:none;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)">
-  <div class="lcpBox">
+  <!-- HOST VIEW -->
+  <div class="lcpBox" id="lcpHostBox">
     <div class="lcpTitle">🖥 لوحة التحكم</div>
     <div class="lcpSubtitle">أنت الهوست — تحكم كامل</div>
     <div class="lcpBtns">
       <button class="lcpBtn lcpStart" onclick="mpHostStartFromPC()">▶ ابدأ اللعبة</button>
       <button class="lcpBtn" onclick="openSettingsFromLobby()">⚙ الإعدادات</button>
+      <button class="lcpBtn" onclick="lcpShowKick()">🚫 طرد لاعب</button>
       <button class="lcpBtn lcpClose" onclick="closeLobbyPC()">✕ إغلاق</button>
     </div>
     <div id="lcpStartHint" class="lcpHint">يحتاج لاعبَين على الأقل</div>
+    <!-- Kick sub-panel -->
+    <div id="lcpKickPanel" style="display:none;margin-top:14px;border-top:1px solid rgba(68,136,255,.2);padding-top:12px">
+      <div style="font-size:.9em;color:#88aacc;margin-bottom:8px;text-align:center">اختر لاعباً لطرده:</div>
+      <div id="lcpKickList" style="display:flex;flex-direction:column;gap:7px"></div>
+      <button class="lcpBtn lcpClose" style="margin-top:10px" onclick="lcpHideKick()">← رجوع</button>
+    </div>
+  </div>
+  <!-- PLAYER VIEW -->
+  <div class="lcpBox" id="lcpPlayerBox" style="display:none">
+    <div class="lcpTitle">🖥 الكمبيوتر</div>
+    <div class="lcpSubtitle">إعدادات اللعب</div>
+    <div class="lcpBtns">
+      <button class="lcpBtn" onclick="openSettingsFromLobby()">⚙ الإعدادات</button>
+      <button class="lcpBtn lcpClose" onclick="closeLobbyPC()">✕ إغلاق</button>
+    </div>
   </div>
 </div>
 
@@ -698,6 +735,9 @@ canvas{
     <div class="batCell batFull" id="bat2"><div class="batFill" style="width:100%"></div></div>
   </div>
 </div>
+
+<!-- MINECRAFT JOIN MESSAGES -->
+<div id="mcChatLog"></div>
 
 <!-- INTERACT PROMPT -->
 <div id="interactPrompt">[ F ] افتح الصندوق</div>
@@ -1134,6 +1174,18 @@ function triggerBlink(){
       setTimeout(()=>{ isBlinking=false; },160);
     },260);
   },100);
+}
+
+function showJoinMessage(name){
+  const log=document.getElementById('mcChatLog');
+  if(!log) return;
+  const div=document.createElement('div');
+  div.className='mcJoinMsg';
+  div.textContent=name+' joined the game';
+  log.appendChild(div);
+  while(log.children.length>5) log.removeChild(log.firstChild);
+  setTimeout(()=>{ div.classList.add('fade'); },3500);
+  setTimeout(()=>{ if(div.parentNode) div.parentNode.removeChild(div); },4700);
 }
 
 function showToast(msg,duration=2000){
@@ -3366,7 +3418,7 @@ function mpHandleNewConnection(conn){
 
     updateLobbyPlayerList();
     if(MP.lobbyActive) updateLobbyAvatars();
-    showToast('🎮 '+MP.players[pid].name+' دخل الغرفة');
+    showJoinMessage(MP.players[pid].name);
 
     // Start voice call if voice enabled
     if(MP.voiceEnabled&&MP.localStream) mpCallPeer(pid);
@@ -3405,12 +3457,7 @@ function mpHandlePlayerMsg(pid,data){
       mpBroadcastExcept(pid,{...data});
       break;
     case 'join':
-      if(MP.players[pid]){
-        MP.players[pid].name=data.name;
-        // Rebroadcast corrected name to all other players
-        mpBroadcastExcept(pid,{ type:'nameUpdate', peerId:pid, name:data.name });
-        updateLobbyPlayerList();
-      }
+      if(MP.players[pid]) MP.players[pid].name=data.name;
       break;
   }
 }
@@ -3433,35 +3480,11 @@ function mpHandleHostMsg(data){
         if(pid!==myId&&!MP.players[pid].isLocal&&MP.voiceEnabled&&MP.localStream) mpCallPeer(pid);
       });
       break;
-    case 'nameUpdate':
-      if(MP.players[data.peerId]){
-        MP.players[data.peerId].name=data.name;
-        // Update the 3D nametag if mesh already exists
-        const p=MP.players[data.peerId];
-        if(p.mesh){
-          const oldTag=p.mesh.getObjectByName('nameTag');
-          if(oldTag) p.mesh.remove(oldTag);
-          const nc2=document.createElement('canvas'); nc2.width=256; nc2.height=64;
-          const nctx2=nc2.getContext('2d');
-          nctx2.clearRect(0,0,256,64);
-          nctx2.font='bold 26px Arial'; nctx2.textAlign='center';
-          const nameStr2=data.name.substring(0,12);
-          const tw2=nctx2.measureText(nameStr2).width;
-          nctx2.fillStyle='rgba(0,0,0,0.52)';
-          nctx2.fillRect(128-tw2/2-10,14,tw2+20,30);
-          nctx2.fillStyle='#ffffff';
-          nctx2.fillText(nameStr2,128,37);
-          const nt2=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.32),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc2),transparent:true,side:THREE.DoubleSide,depthWrite:false}));
-          nt2.position.y=2.05; nt2.name='nameTag'; p.mesh.add(nt2);
-        }
-        updateLobbyPlayerList();
-      }
-      break;
     case 'playerJoined':
       MP.players[data.peerId]=data.player;
       updateLobbyPlayerList();
       if(MP.lobbyActive) updateLobbyAvatars();
-      showToast('🎮 '+data.player.name+' دخل الغرفة');
+      showJoinMessage(data.player.name);
       if(MP.voiceEnabled&&MP.localStream) mpCallPeer(data.peerId);
       break;
     case 'playerLeft':
@@ -3502,6 +3525,40 @@ function mpHandleHostMsg(data){
         const sw=document.getElementById('mpStartBtnWrap');
         if(sw) sw.style.display='block';
         showToast('👑 أنت الهوست الآن!',3000);
+      }
+      break;
+    case 'kicked':
+      showToast('🚫 تم طردك من الغرفة',3000);
+      setTimeout(()=>{ location.reload(); },2000);
+      break;
+    case 'playerKicked':{
+      const kname=MP.players[data.peerId]?.name||data.name||'لاعب';
+      if(MP.lobbyAvatars?.[data.peerId]){ MP.lobbyScene?.remove(MP.lobbyAvatars[data.peerId]); delete MP.lobbyAvatars[data.peerId]; }
+      if(MP.players[data.peerId]?.mesh){ scene?.remove(MP.players[data.peerId].mesh); }
+      delete MP.players[data.peerId];
+      updateLobbyPlayerList();
+      showToast('🚫 '+kname+' تم طرده',2500);
+      break;
+    }
+    case 'nameUpdate':
+      if(MP.players[data.peerId]){
+        MP.players[data.peerId].name=data.name;
+        // Refresh 3D nametag if mesh exists
+        const pnu=MP.players[data.peerId];
+        if(pnu.mesh){
+          const oldTag=pnu.mesh.getObjectByName('nameTag');
+          if(oldTag) pnu.mesh.remove(oldTag);
+          const nc2=document.createElement('canvas'); nc2.width=256; nc2.height=64;
+          const nx=nc2.getContext('2d');
+          nx.clearRect(0,0,256,64); nx.font='bold 26px Arial'; nx.textAlign='center';
+          const ns=data.name.substring(0,12);
+          const tw=nx.measureText(ns).width;
+          nx.fillStyle='rgba(0,0,0,0.52)'; nx.fillRect(128-tw/2-10,14,tw+20,30);
+          nx.fillStyle='#ffffff'; nx.fillText(ns,128,37);
+          const nt2=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.32),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc2),transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+          nt2.position.y=2.05; nt2.name='nameTag'; pnu.mesh.add(nt2);
+        }
+        updateLobbyPlayerList();
       }
       break;
   }
@@ -3683,21 +3740,79 @@ let _lobbyPCKeyHeld=false;
 let _lobbyPCOpen=false;
 
 function openLobbyPC(){
-  if(!MP.isHost) return;
   _lobbyPCOpen=true;
-  // Unlock mouse so host can click
+  // Unlock mouse so player can click
   if(document.pointerLockElement) document.exitPointerLock();
   _lobbyLocked=false;
-  // Update start hint
-  const hint=document.getElementById('lcpStartHint');
-  if(hint){
-    const cnt=Object.keys(MP.players).length;
-    hint.textContent=cnt>=2?`${cnt} لاعبين جاهزون للبدء`:'يحتاج لاعبَين على الأقل';
-    hint.style.color=cnt>=2?'rgba(68,200,100,.7)':'rgba(255,255,255,.25)';
+
+  // Show correct box
+  const hostBox=document.getElementById('lcpHostBox');
+  const playerBox=document.getElementById('lcpPlayerBox');
+  if(hostBox) hostBox.style.display=MP.isHost?'block':'none';
+  if(playerBox) playerBox.style.display=MP.isHost?'none':'block';
+
+  // Update start hint (host only)
+  if(MP.isHost){
+    const hint=document.getElementById('lcpStartHint');
+    if(hint){
+      const cnt=Object.keys(MP.players).length;
+      hint.textContent=cnt>=2?`${cnt} لاعبين جاهزون للبدء`:'يحتاج لاعبَين على الأقل';
+      hint.style.color=cnt>=2?'rgba(68,200,100,.7)':'rgba(255,255,255,.25)';
+    }
+    lcpHideKick();
   }
+
   const panel=document.getElementById('lobbyComputerPanel');
   if(panel) panel.style.display='flex';
 }
+
+function lcpShowKick(){
+  const list=document.getElementById('lcpKickList');
+  const panel=document.getElementById('lcpKickPanel');
+  const btns=document.querySelector('#lcpHostBox .lcpBtns');
+  if(!list||!panel) return;
+  list.innerHTML='';
+  const myId=MP.peer?.id;
+  const others=Object.entries(MP.players).filter(([pid])=>pid!==myId);
+  if(others.length===0){
+    list.innerHTML='<div style="color:#556677;text-align:center;font-size:.9em">لا يوجد لاعبون آخرون</div>';
+  } else {
+    others.forEach(([pid,p])=>{
+      const col=PLAYER_COLORS_CSS[p.color%PLAYER_COLORS_CSS.length];
+      const btn=document.createElement('button');
+      btn.className='lcpBtn';
+      btn.style.cssText='border-color:rgba(255,80,80,.4);color:#ff9999;display:flex;justify-content:space-between;align-items:center;gap:10px';
+      btn.innerHTML=`<span style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;display:inline-block"></span><span style="flex:1;text-align:right">${p.name}</span><span style="color:#ff5555;font-size:.85em">طرد ✕</span>`;
+      btn.onclick=()=>{ mpKickPlayer(pid); lcpHideKick(); };
+      list.appendChild(btn);
+    });
+  }
+  if(btns) btns.style.display='none';
+  panel.style.display='block';
+}
+
+function lcpHideKick(){
+  const panel=document.getElementById('lcpKickPanel');
+  const btns=document.querySelector('#lcpHostBox .lcpBtns');
+  if(panel) panel.style.display='none';
+  if(btns) btns.style.display='flex';
+}
+
+function mpKickPlayer(pid){
+  if(!MP.isHost||!MP.playerConns[pid]) return;
+  const name=MP.players[pid]?.name||'لاعب';
+  // Tell the kicked player
+  try{ MP.playerConns[pid].send({ type:'kicked' }); }catch(e){}
+  // Tell everyone else
+  mpBroadcastExcept(pid,{ type:'playerKicked', peerId:pid, name });
+  // Clean up on host
+  setTimeout(()=>{
+    try{ MP.playerConns[pid]?.close(); }catch(e){}
+    mpHandlePlayerLeft(pid);
+  },300);
+  showToast('🚫 تم طرد '+name,2500);
+}
+
 
 function closeLobbyPC(){
   _lobbyPCOpen=false;
@@ -4076,8 +4191,8 @@ function lobbyLoop(ts=0){
     }
   }
 
-  // Computer proximity check (host only)
-  if(MP.isHost && MP.lobbyComputerPos){
+  // Computer proximity check (all players)
+  if(MP.lobbyComputerPos){
     const dx=MP.lobbyPPos.x-MP.lobbyComputerPos.x;
     const dz=MP.lobbyPPos.z-MP.lobbyComputerPos.z;
     const dist=Math.sqrt(dx*dx+dz*dz);
@@ -4183,11 +4298,11 @@ function toggleHorrorEffects(){
   const sat=document.getElementById('horrorSat');
   const canvas=document.getElementById('c');
   if(toggle) toggle.classList.toggle('on',horrorEffectsOn);
-  if(grain) grain.style.opacity=horrorEffectsOn?'0.18':'0';
+  if(grain) grain.style.opacity=horrorEffectsOn?'0.07':'0';
   if(sat) sat.style.opacity=horrorEffectsOn?'1':'0';
   if(canvas){
     canvas.style.filter=horrorEffectsOn
-      ? 'contrast(1.22) brightness(.52) saturate(1.45)'
+      ? 'contrast(1.06) brightness(.54) saturate(1.12)'
       : 'contrast(1.02) brightness(.56) saturate(.32)';
   }
   if(horrorEffectsOn && !_horrorAnimId) _startHorrorAnim();
@@ -4200,11 +4315,11 @@ function _startHorrorAnim(){
     const grain=document.getElementById('horrorGrain');
     const canvas=document.getElementById('c');
     // Subtle grain flicker
-    if(grain) grain.style.opacity=(0.12+Math.random()*0.12).toFixed(3);
+    if(grain) grain.style.opacity=(0.04+Math.random()*0.06).toFixed(3);
     // Occasional saturation pulse
     if(canvas && Math.random()<0.04){
-      const boost=1.45+Math.random()*0.8;
-      canvas.style.filter=`contrast(${1.18+Math.random()*.18}) brightness(.5) saturate(${boost})`;
+      const boost=0.55+Math.random()*0.25;
+      canvas.style.filter=`contrast(${1.04+Math.random()*.06}) brightness(.54) saturate(${boost})`;
     }
     _horrorAnimId=requestAnimationFrame(tick);
   }
@@ -4402,8 +4517,9 @@ function joinRoomFromSearch(code){
   const inp=document.getElementById('mpJoinCode');
   if(inp) inp.value=code;
   document.getElementById('mpMenuScreen').style.display='flex';
-  // Set name BEFORE joining — this was the bug causing "لاعب" to appear
-  MP.localName=getMpName();
+  // Auto-join
+  const mpNameInp=document.getElementById('mpNameInput');
+  if(!mpNameInp?.value?.trim()) mpNameInp.value='لاعب';
   showMpLoading('⏳ جاري الاتصال...');
   loadPeerJS(()=> mpJoinRoom(code));
 }
