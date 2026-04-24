@@ -3096,7 +3096,62 @@ let mouseDown=false,lastMX=0,lastMY=0;
 let joyTouchId=null,joyBaseX=0,joyBaseY=0;
 let lookTouchId=null,lookLastX=0,lookLastY=0;
 let touchJoyVec={x:0,z:0};
-const isMobile=()=>'ontouchstart' in window||navigator.maxTouchPoints>0;
+// ── Smart device detection ──
+// (pointer: coarse) = touch/finger → mobile | (hover: hover) = mouse → desktop
+const isMobile=()=>{
+  if(window.matchMedia('(hover: none) and (pointer: coarse)').matches) return true;
+  if(window.matchMedia('(hover: hover) and (pointer: fine)').matches) return false;
+  return /android|iphone|ipad|ipod|windows phone|mobile/i.test(navigator.userAgent);
+};
+
+// ── Dynamic input detection (handles hybrid devices) ──
+let _touchControlsVisible=false;
+let _inputDetected=false;
+
+function _showTouchControls(){
+  if(_touchControlsVisible) return;
+  _touchControlsVisible=true;
+  const joy=document.getElementById('joyZone');
+  const fl=document.getElementById('flBtn');
+  const ch=document.getElementById('crosshair');
+  if(joy&&joy.style.display==='none') joy.style.display='block';
+  if(fl&&fl.style.display==='none') fl.style.display='flex';
+  if(ch) ch.style.display='none';
+}
+
+function _hideTouchControls(){
+  if(!_touchControlsVisible) return;
+  _touchControlsVisible=false;
+  const joy=document.getElementById('joyZone');
+  const fl=document.getElementById('flBtn');
+  const ch=document.getElementById('crosshair');
+  if(joy) joy.style.display='none';
+  if(fl) fl.style.display='none';
+  if(ch) ch.style.display='block';
+}
+
+function _initDynamicInputDetection(){
+  if(_inputDetected) return;
+  function onFirstMouse(e){
+    if(_inputDetected) return;
+    // sourceCapabilities=null means touch-simulated, skip it
+    if(e.sourceCapabilities&&!e.sourceCapabilities.firesTouchEvents){
+      _inputDetected=true;
+      _hideTouchControls();
+      document.removeEventListener('mousemove',onFirstMouse);
+      document.removeEventListener('touchstart',onFirstTouch);
+    }
+  }
+  function onFirstTouch(){
+    if(_inputDetected) return;
+    _inputDetected=true;
+    _showTouchControls();
+    document.removeEventListener('mousemove',onFirstMouse);
+    document.removeEventListener('touchstart',onFirstTouch);
+  }
+  document.addEventListener('mousemove',onFirstMouse,{passive:true});
+  document.addEventListener('touchstart',onFirstTouch,{passive:true,once:true});
+}
 
 // ══ SOLO START (wrapper) ══
 function startSolo(){
@@ -3136,10 +3191,18 @@ function startGame(){
     document.getElementById('joyZone').style.display='block';
     document.getElementById('flBtn').style.display='flex';
     document.getElementById('crosshair').style.display='none';
-    document.getElementById('flBtn').addEventListener('touchstart',e=>{
-      e.preventDefault();e.stopPropagation();toggleFlashlight();
-    },{passive:false});
+    _touchControlsVisible=true;
+  } else {
+    document.getElementById('joyZone').style.display='none';
+    document.getElementById('flBtn').style.display='none';
+    _touchControlsVisible=false;
   }
+  // Bind flashlight button for touch (works whether shown now or shown later dynamically)
+  document.getElementById('flBtn').addEventListener('touchstart',e=>{
+    e.preventDefault();e.stopPropagation();toggleFlashlight();
+  },{passive:false});
+  // Start dynamic detection for hybrid devices (e.g. laptop touchscreen)
+  _initDynamicInputDetection();
 
   initAudio();buildScene();
   bindSettingsControls();
@@ -3457,11 +3520,7 @@ function mpHandlePlayerMsg(pid,data){
       mpBroadcastExcept(pid,{...data});
       break;
     case 'join':
-      if(MP.players[pid]){
-        MP.players[pid].name=(data.name||'').trim()||MP.players[pid].name||'لاعب';
-        updateLobbyPlayerList();
-        updateMpPlayerCount();
-      }
+      if(MP.players[pid]) MP.players[pid].name=data.name;
       break;
   }
 }
@@ -4524,7 +4583,6 @@ function joinRoomFromSearch(code){
   // Auto-join
   const mpNameInp=document.getElementById('mpNameInput');
   if(!mpNameInp?.value?.trim()) mpNameInp.value='لاعب';
-  MP.localName=getMpName();
   showMpLoading('⏳ جاري الاتصال...');
   loadPeerJS(()=> mpJoinRoom(code));
 }
