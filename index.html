@@ -332,6 +332,74 @@ canvas{
   border-color:rgba(68,136,255,.6)!important;
 }
 
+/* ── LOBBY COMPUTER PANEL ── */
+#lobbyComputerPrompt{
+  position:fixed;bottom:120px;left:50%;transform:translateX(-50%);
+  z-index:35;display:none;pointer-events:none;
+  padding:9px 22px;
+  background:rgba(0,0,0,.72);
+  border:1px solid rgba(100,220,100,.4);
+  border-radius:8px;
+  color:rgba(120,255,120,.95);
+  font-size:1.02em;letter-spacing:1.5px;
+  text-shadow:0 0 10px rgba(80,255,80,.4);
+  animation:blink 1.6s infinite;
+}
+#lobbyComputerPanel{
+  position:fixed;inset:0;z-index:60;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(4px);
+}
+.lcpBox{
+  width:min(380px,88vw);
+  background:rgba(4,12,28,.96);
+  border:1px solid rgba(68,136,255,.5);
+  border-radius:16px;
+  padding:28px 26px 22px;
+  text-align:center;
+  box-shadow:0 0 60px rgba(68,100,255,.18),0 20px 60px rgba(0,0,0,.7);
+  direction:rtl;
+}
+.lcpTitle{
+  font-size:1.5em;color:#88bbff;margin-bottom:6px;
+  letter-spacing:2px;text-shadow:0 0 12px rgba(68,136,255,.5);
+}
+.lcpSubtitle{font-size:.82em;color:rgba(136,170,220,.6);margin-bottom:22px;letter-spacing:1px}
+.lcpBtns{display:flex;flex-direction:column;gap:12px}
+.lcpBtn{
+  padding:14px 18px;
+  background:linear-gradient(135deg,#0a2040,#050c1a);
+  border:1px solid rgba(68,136,255,.5);
+  color:#88ccff;font-size:1.05em;cursor:pointer;
+  border-radius:10px;font-family:inherit;letter-spacing:1px;
+  transition:.2s;text-shadow:0 0 8px rgba(68,136,255,.3);
+}
+.lcpBtn:hover{background:linear-gradient(135deg,#163a70,#081a36);box-shadow:0 0 20px rgba(68,136,255,.3);transform:translateY(-1px)}
+.lcpBtn.lcpStart{
+  background:linear-gradient(135deg,#0d2a52,#061428);
+  border-color:rgba(68,136,255,.8);
+  font-size:1.15em;letter-spacing:2px;
+  box-shadow:0 0 18px rgba(68,136,255,.2);
+}
+.lcpBtn.lcpStart:hover{box-shadow:0 0 36px rgba(68,136,255,.5)}
+.lcpBtn.lcpClose{
+  background:rgba(30,5,5,.7);border-color:rgba(255,60,60,.3);
+  color:#ff9999;margin-top:6px;
+}
+.lcpBtn.lcpClose:hover{background:rgba(60,5,5,.8)}
+.lcpHint{font-size:.76em;color:rgba(255,255,255,.25);margin-top:14px;letter-spacing:1px}
+
+/* ── IN-GAME VOICE BUTTON ── */
+#inGameVoiceBtn{
+  position:fixed;bottom:18px;left:18px;z-index:14;display:none;
+  padding:9px 15px;
+  background:rgba(0,20,40,.75);
+  border:1px solid rgba(68,136,255,.35);
+  color:#99bbcc;cursor:pointer;border-radius:8px;
+  font-family:inherit;font-size:.88em;transition:.2s;
+}
+#inGameVoiceBtn:hover{background:rgba(0,30,60,.8);border-color:rgba(68,136,255,.6)}
+
 /* ── HORROR OVERLAY (grain + saturation boost) ── */
 #horrorGrain{
   position:fixed;inset:0;pointer-events:none;z-index:11;opacity:0;
@@ -562,22 +630,33 @@ canvas{
     <div id="mpPlayerList" style="display:flex;flex-direction:column;gap:6px"></div>
     <div id="mpRoomType" style="margin-top:10px;font-size:.78em;color:rgba(255,255,255,.35);letter-spacing:1px"></div>
   </div>
-  <!-- Start button (host only) - bottom center -->
-  <div id="mpStartBtnWrap" style="position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:none;text-align:center">
-    <button id="mpStartBtn" onclick="mpHostStart()" style="padding:16px 64px;background:linear-gradient(135deg,#0d2a52,#061428);border:2px solid rgba(68,136,255,.8);color:#88ccff;font-size:1.25em;cursor:pointer;border-radius:12px;font-family:inherit;letter-spacing:2px;text-shadow:0 0 12px rgba(68,136,255,.6);box-shadow:0 0 30px rgba(68,136,255,.25);transition:.2s">▶ ابدأ اللعبة</button>
-    <div id="mpStartHint" style="color:rgba(255,255,255,.35);font-size:.8em;margin-top:6px">يحتاج لاعبَين على الأقل</div>
-  </div>
   <!-- Leave button bottom right -->
   <div style="position:absolute;bottom:28px;right:14px">
     <button onclick="mpLeaveLobby()" style="padding:10px 18px;background:rgba(40,5,5,.7);border:1px solid rgba(255,60,60,.35);color:#ff8888;cursor:pointer;border-radius:8px;font-family:inherit;font-size:.9em">خروج ✕</button>
   </div>
-  <!-- Voice button bottom left -->
-  <div style="position:absolute;bottom:28px;left:14px">
-    <button id="mpVoiceBtn" onclick="mpToggleVoice()" style="padding:10px 16px;background:rgba(0,20,40,.7);border:1px solid rgba(68,136,255,.35);color:#99bbcc;cursor:pointer;border-radius:8px;font-family:inherit;font-size:.9em;transition:.2s">🎤 تفعيل الصوت</button>
-  </div>
   <!-- Hint bottom -->
-  <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.28);font-size:.78em;text-align:center;pointer-events:none;white-space:nowrap">WASD للتجول · انقر على الشاشة للتحكم بالكاميرا</div>
+  <div id="lobbyHint" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.28);font-size:.78em;text-align:center;pointer-events:none;white-space:nowrap">WASD للتجول · انقر على الشاشة للتحكم بالكاميرا</div>
 </div>
+
+<!-- ══ LOBBY COMPUTER PROMPT ══ -->
+<div id="lobbyComputerPrompt">⌨ اضغط F لفتح الكمبيوتر</div>
+
+<!-- ══ LOBBY COMPUTER PANEL (host only) ══ -->
+<div id="lobbyComputerPanel" style="display:none;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)">
+  <div class="lcpBox">
+    <div class="lcpTitle">🖥 لوحة التحكم</div>
+    <div class="lcpSubtitle">أنت الهوست — تحكم كامل</div>
+    <div class="lcpBtns">
+      <button class="lcpBtn lcpStart" onclick="mpHostStartFromPC()">▶ ابدأ اللعبة</button>
+      <button class="lcpBtn" onclick="openSettingsFromLobby()">⚙ الإعدادات</button>
+      <button class="lcpBtn lcpClose" onclick="closeLobbyPC()">✕ إغلاق</button>
+    </div>
+    <div id="lcpStartHint" class="lcpHint">يحتاج لاعبَين على الأقل</div>
+  </div>
+</div>
+
+<!-- ══ IN-GAME VOICE BUTTON ══ -->
+<button id="inGameVoiceBtn" onclick="mpToggleVoice()">🎤 تفعيل الصوت</button>
 
 <!-- ══ IN-GAME MP HUD ══ -->
 <div id="mpGameHUD" style="display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:14;pointer-events:none">
@@ -2955,6 +3034,8 @@ function winGame(){
   won=true;document.exitPointerLock();stopMusic();
   if(MP.enabled){ if(MP.isHost) mpBroadcast({type:'won',peerId:MP.peer.id}); else mpSendToHost({type:'won'}); }
   document.getElementById('winScreen').style.display='flex';
+  const vBtn=document.getElementById('inGameVoiceBtn');
+  if(vBtn) vBtn.style.display='none';
   hideHUD();
 }
 
@@ -3568,9 +3649,57 @@ function voiceUpdateProximity(){
   });
 }
 
+// ── Lobby Computer Panel ──
+let _lobbyPCKeyHeld=false;
+let _lobbyPCOpen=false;
+
+function openLobbyPC(){
+  if(!MP.isHost) return;
+  _lobbyPCOpen=true;
+  // Unlock mouse so host can click
+  if(document.pointerLockElement) document.exitPointerLock();
+  _lobbyLocked=false;
+  // Update start hint
+  const hint=document.getElementById('lcpStartHint');
+  if(hint){
+    const cnt=Object.keys(MP.players).length;
+    hint.textContent=cnt>=2?`${cnt} لاعبين جاهزون للبدء`:'يحتاج لاعبَين على الأقل';
+    hint.style.color=cnt>=2?'rgba(68,200,100,.7)':'rgba(255,255,255,.25)';
+  }
+  const panel=document.getElementById('lobbyComputerPanel');
+  if(panel) panel.style.display='flex';
+}
+
+function closeLobbyPC(){
+  _lobbyPCOpen=false;
+  const panel=document.getElementById('lobbyComputerPanel');
+  if(panel) panel.style.display='none';
+  // Re-lock mouse when closing
+  if(MP.lobbyActive && renderer){
+    renderer.domElement.requestPointerLock();
+  }
+}
+
+function mpHostStartFromPC(){
+  const panel=document.getElementById('lobbyComputerPanel');
+  if(panel) panel.style.display='none';
+  mpHostStart();
+}
+
+function openSettingsFromLobby(){
+  const panel=document.getElementById('lobbyComputerPanel');
+  if(panel) panel.style.display='none';
+  openSettings();
+  // Override close button to reopen computer panel
+  const origClose=window._settingsCloseCallback;
+  window._settingsCloseCallback=()=>{
+    openLobbyPC();
+  };
+}
+
 // ── Voice chat ──
 async function mpToggleVoice(){
-  const btn=document.getElementById('mpVoiceBtn');
+  const btn=document.getElementById('inGameVoiceBtn');
   if(MP.voiceEnabled){
     MP.voiceEnabled=false;
     if(MP.localStream){ MP.localStream.getTracks().forEach(t=>t.stop()); MP.localStream=null; }
@@ -3581,7 +3710,7 @@ async function mpToggleVoice(){
   try{
     MP.localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
     MP.voiceEnabled=true;
-    if(btn) btn.innerHTML='🔴 الصوت مفعّل (إيقاف)';
+    if(btn) btn.innerHTML='🔴 إيقاف الصوت';
     showToast('🎤 الصوت مفعّل');
     // Call all existing players
     Object.keys(MP.players).forEach(pid=>{
@@ -3628,25 +3757,29 @@ function showLobbyScreen(){
   if(codeEl) codeEl.textContent=MP.roomCode;
   const rt=document.getElementById('mpRoomType');
   if(rt) rt.textContent=MP.isPublic?'🌐 غرفة عامة':'🔒 غرفة خاصة';
-  if(MP.isHost){
-    const sw=document.getElementById('mpStartBtnWrap');
-    if(sw) sw.style.display='block';
+  // Update hint for host
+  const hint=document.getElementById('lobbyHint');
+  if(hint){
+    if(MP.isHost) hint.textContent='WASD للتجول · اقترب من الكمبيوتر واضغط F للتحكم';
+    else hint.textContent='WASD للتجول · انقر على الشاشة للتحكم بالكاميرا';
   }
   updateLobbyPlayerList();
   updateMpStartHint();
   buildLobbyScene();
   MP.lobbyActive=true;
-  MP.lobbyAvatars={};       // reset avatar map for fresh scene
-  updateLobbyAvatars();     // create avatars immediately (don't wait for sync tick)
-  // Bind lobby controls
+  MP.lobbyAvatars={};
+  updateLobbyAvatars();
   bindLobbyControls();
   lobbyLoop();
-  // Register with public room registry if applicable
   if(MP.isPublic&&MP.isHost){ setTimeout(mpRegisterPublicRoom,1200); }
 }
 
 function hideLobbyScreen(){
   document.getElementById('mpLobbyHUD').style.display='none';
+  document.getElementById('lobbyComputerPanel').style.display='none';
+  const prompt=document.getElementById('lobbyComputerPrompt');
+  if(prompt) prompt.style.display='none';
+  _lobbyPCOpen=false;
   MP.lobbyActive=false;
   if(MP.lobbyAnimId){ cancelAnimationFrame(MP.lobbyAnimId); MP.lobbyAnimId=null; }
 }
@@ -3672,11 +3805,19 @@ function updateLobbyPlayerList(){
 
 function updateMpStartHint(){
   const hint=document.getElementById('mpStartHint');
-  if(!hint) return;
-  const cnt=Object.keys(MP.players).length;
-  if(cnt>=2) hint.style.color='rgba(68,136,255,.6)';
-  else hint.style.color='rgba(255,255,255,.35)';
-  hint.textContent=cnt>=2?`${cnt} لاعبين جاهزون للبدء`:'يحتاج لاعبَين على الأقل';
+  if(hint){
+    const cnt=Object.keys(MP.players).length;
+    if(cnt>=2) hint.style.color='rgba(68,136,255,.6)';
+    else hint.style.color='rgba(255,255,255,.35)';
+    hint.textContent=cnt>=2?`${cnt} لاعبين جاهزون للبدء`:'يحتاج لاعبَين على الأقل';
+  }
+  // Also update computer panel hint if open
+  const lcpHint=document.getElementById('lcpStartHint');
+  if(lcpHint){
+    const cnt=Object.keys(MP.players).length;
+    lcpHint.textContent=cnt>=2?`${cnt} لاعبين جاهزون للبدء`:'يحتاج لاعبَين على الأقل';
+    lcpHint.style.color=cnt>=2?'rgba(68,200,100,.7)':'rgba(255,255,255,.25)';
+  }
 }
 
 function mpCopyCode(){
@@ -3782,6 +3923,43 @@ function buildLobbyScene(){
   MP.lobbyAvatars={};
   updateLobbyAvatars();
 
+  // ── Computer Terminal (Host Only) ──
+  const compGroup = new THREE.Group();
+  // Desk
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(1.8,.08,0.9), new THREE.MeshLambertMaterial({color:0x1a1208}));
+  desk.position.set(0,.76,0); compGroup.add(desk);
+  // Monitor base
+  const monBase = new THREE.Mesh(new THREE.BoxGeometry(.18,.4,.18), new THREE.MeshLambertMaterial({color:0x0d0d0d}));
+  monBase.position.set(0,1.0,-.1); compGroup.add(monBase);
+  // Monitor screen
+  const monScreen = new THREE.Mesh(new THREE.BoxGeometry(1.1,.7,.06), new THREE.MeshLambertMaterial({color:0x0d0d0d,emissive:0x001433}));
+  monScreen.position.set(0,1.55,-.1); compGroup.add(monScreen);
+  // Screen glow canvas
+  const monCanvas = document.createElement('canvas');
+  monCanvas.width=256; monCanvas.height=160;
+  const mc=monCanvas.getContext('2d');
+  mc.fillStyle='#000814'; mc.fillRect(0,0,256,160);
+  mc.font='bold 18px monospace'; mc.fillStyle='#00cc88'; mc.textAlign='center';
+  mc.fillText('█ SYSTEM READY █',128,38);
+  mc.font='13px monospace'; mc.fillStyle='rgba(0,200,100,.7)';
+  mc.fillText('مرحباً بالهوست',128,68);
+  mc.fillText('اضغط F للتحكم',128,94);
+  mc.fillStyle='rgba(0,200,100,.3)';
+  mc.fillRect(20,112,216,2);
+  mc.font='11px monospace'; mc.fillStyle='rgba(0,180,80,.5)';
+  mc.fillText('CTRL v1.0 | LOBBY ACTIVE',128,134);
+  const monTex = new THREE.CanvasTexture(monCanvas);
+  const screenFace = new THREE.Mesh(new THREE.PlaneGeometry(1.0,.62), new THREE.MeshBasicMaterial({map:monTex,transparent:false}));
+  screenFace.position.set(0,1.55,-.065); compGroup.add(screenFace);
+  // Monitor glow light
+  const monLight = new THREE.PointLight(0x00cc66, 1.8, 5);
+  monLight.position.set(0,1.55,0); compGroup.add(monLight);
+  // Place computer in front of player start position
+  compGroup.position.set(0,0,-5.5);
+  compGroup.name = 'lobbyComputer';
+  s.add(compGroup);
+  MP.lobbyComputerPos = {x:0, z:-5.5};
+
   // Resize handler
   window.addEventListener('resize',()=>{
     if(MP.lobbyActive&&MP.lobbyCam){ MP.lobbyCam.aspect=innerWidth/innerHeight; MP.lobbyCam.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
@@ -3869,6 +4047,21 @@ function lobbyLoop(ts=0){
     }
   }
 
+  // Computer proximity check (host only)
+  if(MP.isHost && MP.lobbyComputerPos){
+    const dx=MP.lobbyPPos.x-MP.lobbyComputerPos.x;
+    const dz=MP.lobbyPPos.z-MP.lobbyComputerPos.z;
+    const dist=Math.sqrt(dx*dx+dz*dz);
+    const prompt=document.getElementById('lobbyComputerPrompt');
+    const nearPC = dist < 2.8;
+    if(prompt) prompt.style.display = nearPC ? 'block' : 'none';
+    if(nearPC && keys['KeyF'] && !_lobbyPCKeyHeld){
+      _lobbyPCKeyHeld=true;
+      openLobbyPC();
+    }
+    if(!keys['KeyF']) _lobbyPCKeyHeld=false;
+  }
+
   // Send lobby position
   MP.syncTimer-=dt;
   if(MP.syncTimer<=0){
@@ -3930,6 +4123,9 @@ function mpBeginGame(){
   MP.enabled=true;
   // Unlock pointer if locked in lobby
   if(document.pointerLockElement===renderer.domElement) document.exitPointerLock();
+  // Show in-game voice button
+  const vBtn=document.getElementById('inGameVoiceBtn');
+  if(vBtn) vBtn.style.display='block';
   // Start game
   startGame();
 }
@@ -3941,6 +4137,10 @@ function mpLeaveLobby(){
   if(MP.peer){ MP.peer.destroy(); MP.peer=null; }
   MP.players={}; MP.playerConns={}; MP.hostConn=null; MP.enabled=false; MP.gameStarted=false;
   document.getElementById('mpLobbyHUD').style.display='none';
+  document.getElementById('lobbyComputerPanel').style.display='none';
+  const prompt=document.getElementById('lobbyComputerPrompt');
+  if(prompt) prompt.style.display='none';
+  _lobbyPCOpen=false;
   // Go back to main menu
   document.getElementById('startScreen').style.display='flex';
 }
