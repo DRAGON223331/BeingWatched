@@ -3301,9 +3301,10 @@ function mpHandlePlayerMsg(pid,data){
     case 'pos':
       if(MP.players[pid]){
         MP.players[pid].x=data.x; MP.players[pid].y=data.y; MP.players[pid].z=data.z; MP.players[pid].yaw=data.yaw;
+        MP.players[pid].flashOn=data.flashOn;
         MP.players[pid].lobbyX=data.x; MP.players[pid].lobbyZ=data.z;
       }
-      mpBroadcastExcept(pid,{ type:'pos', peerId:pid, x:data.x, y:data.y, z:data.z, yaw:data.yaw });
+      mpBroadcastExcept(pid,{ type:'pos', peerId:pid, x:data.x, y:data.y, z:data.z, yaw:data.yaw, flashOn:data.flashOn });
       break;
     case 'lobbyPos':
       if(MP.players[pid]){ MP.players[pid].lobbyX=data.x; MP.players[pid].lobbyZ=data.z; }
@@ -3334,6 +3335,8 @@ function mpHandleHostMsg(data){
     case 'welcome':
       hideMpLoading();
       MP.players=data.players;
+      // Clear isLocal flags from host's perspective — they're meaningless to us
+      Object.values(MP.players).forEach(p=>{ p.isLocal=false; });
       const myId=MP.peer.id;
       const colorIdx=Object.keys(MP.players).length%PLAYER_COLORS.length;
       MP.players[myId]={ name:MP.localName, color:colorIdx, x:0, y:PH, z:0, yaw:0, isLocal:true, isHost:false, dead:false, won:false, lobbyX:0, lobbyZ:3 };
@@ -3360,7 +3363,7 @@ function mpHandleHostMsg(data){
       showToast('👋 '+lname+' خرج من الغرفة');
       break;
     case 'pos':
-      if(MP.players[data.peerId]){ MP.players[data.peerId].x=data.x; MP.players[data.peerId].y=data.y; MP.players[data.peerId].z=data.z; MP.players[data.peerId].yaw=data.yaw; }
+      if(MP.players[data.peerId]){ MP.players[data.peerId].x=data.x; MP.players[data.peerId].y=data.y; MP.players[data.peerId].z=data.z; MP.players[data.peerId].yaw=data.yaw; MP.players[data.peerId].flashOn=data.flashOn; }
       break;
     case 'lobbyPos':
       if(MP.players[data.peerId]){ MP.players[data.peerId].lobbyX=data.x; MP.players[data.peerId].lobbyZ=data.z; }
@@ -3481,8 +3484,8 @@ function mpSendPosition(dt){
   if(MP.syncTimer>0) return;
   MP.syncTimer=1/30;
   const myId=MP.peer.id;
-  if(MP.players[myId]){ MP.players[myId].x=pPos.x; MP.players[myId].y=pPos.y; MP.players[myId].z=pPos.z; MP.players[myId].yaw=yaw; }
-  const posData={ type:'pos', x:pPos.x, y:pPos.y, z:pPos.z, yaw };
+  if(MP.players[myId]){ MP.players[myId].x=pPos.x; MP.players[myId].y=pPos.y; MP.players[myId].z=pPos.z; MP.players[myId].yaw=yaw; MP.players[myId].flashOn=flashlightOn; }
+  const posData={ type:'pos', x:pPos.x, y:pPos.y, z:pPos.z, yaw, flashOn:flashlightOn };
   if(MP.isHost) mpBroadcast({...posData, peerId:myId});
   else mpSendToHost(posData);
 }
@@ -3492,7 +3495,7 @@ function mpUpdatePlayerMeshes(){
   if(!scene) return;
   const myId=MP.peer?.id;
   Object.entries(MP.players).forEach(([pid,p])=>{
-    if(pid===myId||p.isLocal) return;
+    if(pid===myId) return; // isLocal flag is unreliable (host sets it on own entry before sending welcome)
     if(p.dead||p.won){ if(p.mesh) p.mesh.visible=false; return; }
     if(!p.mesh){
       const col=PLAYER_COLORS[p.color%PLAYER_COLORS.length];
@@ -3515,6 +3518,16 @@ function mpUpdatePlayerMeshes(){
       nctx.fillText(p.name.substring(0,12),128,38);
       const nt=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.28), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc),transparent:true,side:THREE.DoubleSide,depthWrite:false}));
       nt.position.y=2.0; nt.name='nameTag'; g.add(nt);
+      // ── Per-player flashlight spotlight ──
+      const fl=new THREE.SpotLight(0xffeedd,0,22,Math.PI*0.16,0.22,1.8);
+      fl.name='playerFL';
+      fl.position.set(0,1.45,0);
+      const flTgt=new THREE.Object3D();
+      flTgt.name='playerFLTgt';
+      flTgt.position.set(0,1.45,-10);
+      g.add(flTgt);
+      fl.target=flTgt;
+      g.add(fl);
       g.position.set(p.x||0,0,p.z||0);
       scene.add(g);
       p.mesh=g;
@@ -3524,6 +3537,9 @@ function mpUpdatePlayerMeshes(){
     if(p.yaw!==undefined) p.mesh.rotation.y=p.yaw;
     const nt=p.mesh.getObjectByName('nameTag');
     if(nt&&cam) nt.quaternion.copy(cam.quaternion);
+    // Sync flashlight
+    const fl=p.mesh.getObjectByName('playerFL');
+    if(fl) fl.intensity=p.flashOn ? 2.8 : 0;
   });
 }
 
