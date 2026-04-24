@@ -3138,13 +3138,14 @@ function _initDynamicInputDetection(){
     if(e.sourceCapabilities&&!e.sourceCapabilities.firesTouchEvents){
       _inputDetected=true;
       _hideTouchControls();
+      // Only remove the mouse listener — keep touchstart so touch can still override later
       document.removeEventListener('mousemove',onFirstMouse);
-      document.removeEventListener('touchstart',onFirstTouch);
     }
   }
   function onFirstTouch(){
-    if(_inputDetected) return;
+    // Touch always wins — override mouse detection and show controls
     _inputDetected=true;
+    _touchControlsVisible=false; // reset so _showTouchControls won't bail out early
     _showTouchControls();
     document.removeEventListener('mousemove',onFirstMouse);
     document.removeEventListener('touchstart',onFirstTouch);
