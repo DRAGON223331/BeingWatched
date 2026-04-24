@@ -462,6 +462,36 @@ canvas{
 .roomJoinBtn:hover{background:linear-gradient(135deg,#163a70,#081a36);}
 #roomSearchStatus{color:#5577aa;font-size:.9em;text-align:center;margin:8px 0}
 
+/* ── MINECRAFT JOIN MESSAGES ── */
+#mcChatLog{
+  position:fixed;
+  bottom:110px;
+  left:14px;
+  z-index:30;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  pointer-events:none;
+}
+.mcJoinMsg{
+  display:inline-block;
+  background:rgba(0,0,0,0.55);
+  color:#ffff55;
+  font-family:'Courier New',monospace;
+  font-size:1.02em;
+  letter-spacing:.5px;
+  padding:3px 8px 3px 7px;
+  border-left:2px solid rgba(255,255,85,.35);
+  text-shadow:1px 1px 0 rgba(63,63,0,.9);
+  max-width:min(380px,60vw);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  opacity:1;
+  transition:opacity 1.2s ease;
+}
+.mcJoinMsg.fade{opacity:0;}
+
 /* ── SOLO LOBBY HUD ── */
 #soloLobbyHUD{
   display:none;position:fixed;inset:0;z-index:30;
@@ -698,6 +728,9 @@ canvas{
     <div class="batCell batFull" id="bat2"><div class="batFill" style="width:100%"></div></div>
   </div>
 </div>
+
+<!-- MINECRAFT JOIN MESSAGES -->
+<div id="mcChatLog"></div>
 
 <!-- INTERACT PROMPT -->
 <div id="interactPrompt">[ F ] افتح الصندوق</div>
@@ -1134,6 +1167,20 @@ function triggerBlink(){
       setTimeout(()=>{ isBlinking=false; },160);
     },260);
   },100);
+}
+
+function showJoinMessage(name){
+  const log=document.getElementById('mcChatLog');
+  if(!log) return;
+  const div=document.createElement('div');
+  div.className='mcJoinMsg';
+  div.textContent=name+' joined the game';
+  log.appendChild(div);
+  // Keep max 5 messages
+  while(log.children.length>5) log.removeChild(log.firstChild);
+  // Fade after 3.5s, remove after 4.7s
+  setTimeout(()=>{ div.classList.add('fade'); },3500);
+  setTimeout(()=>{ if(div.parentNode) div.parentNode.removeChild(div); },4700);
 }
 
 function showToast(msg,duration=2000){
@@ -3366,7 +3413,7 @@ function mpHandleNewConnection(conn){
 
     updateLobbyPlayerList();
     if(MP.lobbyActive) updateLobbyAvatars();
-    showToast('🎮 '+MP.players[pid].name+' دخل الغرفة');
+    showJoinMessage(MP.players[pid].name);
 
     // Start voice call if voice enabled
     if(MP.voiceEnabled&&MP.localStream) mpCallPeer(pid);
@@ -3432,7 +3479,7 @@ function mpHandleHostMsg(data){
       MP.players[data.peerId]=data.player;
       updateLobbyPlayerList();
       if(MP.lobbyActive) updateLobbyAvatars();
-      showToast('🎮 '+data.player.name+' دخل الغرفة');
+      showJoinMessage(data.player.name);
       if(MP.voiceEnabled&&MP.localStream) mpCallPeer(data.peerId);
       break;
     case 'playerLeft':
@@ -3600,17 +3647,24 @@ function mpUpdatePlayerMeshes(){
       const headTex=makePlayerHeadTexture(col);
       const head=new THREE.Mesh(new THREE.SphereGeometry(.2,8,6), new THREE.MeshLambertMaterial({map:headTex,emissive:new THREE.Color(col).multiplyScalar(.05)}));
       head.position.y=1.5; g.add(head);
-      // Name tag — NO background, white text with outline
-      const nc=document.createElement('canvas'); nc.width=256; nc.height=56;
+      // Name tag — Minecraft style: dark bg + white text
+      const nc=document.createElement('canvas'); nc.width=256; nc.height=64;
       const nctx=nc.getContext('2d');
-      nctx.clearRect(0,0,256,56);
-      nctx.font='bold 26px Tahoma'; nctx.textAlign='center';
-      nctx.strokeStyle='rgba(0,0,0,.95)'; nctx.lineWidth=5;
-      nctx.strokeText(p.name.substring(0,12),128,38);
+      nctx.clearRect(0,0,256,64);
+      nctx.font='bold 26px Arial';
+      nctx.textAlign='center';
+      const nameStr=p.name.substring(0,12);
+      const tw=nctx.measureText(nameStr).width;
+      const padX=10, padY=5;
+      const tx=128, ty=42;
+      // Dark semi-transparent background (Minecraft style)
+      nctx.fillStyle='rgba(0,0,0,0.52)';
+      nctx.fillRect(tx-tw/2-padX, ty-28, tw+padX*2, 30+padY);
+      // White text
       nctx.fillStyle='#ffffff';
-      nctx.fillText(p.name.substring(0,12),128,38);
-      const nt=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.28), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc),transparent:true,side:THREE.DoubleSide,depthWrite:false}));
-      nt.position.y=2.0; nt.name='nameTag'; g.add(nt);
+      nctx.fillText(nameStr,tx,ty);
+      const nt=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.32), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc),transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+      nt.position.y=2.05; nt.name='nameTag'; g.add(nt);
       // ── Per-player flashlight spotlight ──
       const fl=new THREE.SpotLight(0xffeedd,0,22,Math.PI*0.16,0.22,1.8);
       fl.name='playerFL';
