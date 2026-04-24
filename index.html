@@ -3408,6 +3408,18 @@ function mpHandlePlayerLeft(pid){
   updateLobbyPlayerList();
   showToast('👋 '+name+' خرج');
   updateMpStartHint();
+
+  // Auto-delete room when it becomes empty (only local host remains)
+  const remaining=Object.keys(MP.playerConns).length;
+  if(remaining===0&&MP.isHost&&MP.isPublic){
+    // Unregister from public registry
+    if(_myRegistryConn&&_myRegistryConn.open){
+      _myRegistryConn.send({type:'unregister',code:MP.roomCode});
+    } else if(_isRegistryHost){
+      delete _registryRooms[MP.roomCode];
+    }
+    showToast('🚪 الروم فاضية — تم إغلاقها',3000);
+  }
 }
 
 // ── Non-host: host left ──
@@ -4193,6 +4205,10 @@ function mpRegisterPublicRoom(){
       conn.on('open',()=>{
         conn.send({type:'register',code:MP.roomCode,hostName:MP.localName,playerCount:Object.keys(MP.players).length});
         _myRegistryConn=conn;
+        // Unregister cleanly when host closes the page
+        window.addEventListener('beforeunload',()=>{
+          if(_myRegistryConn&&_myRegistryConn.open) _myRegistryConn.send({type:'unregister',code:MP.roomCode});
+        });
         // Keep alive with periodic updates
         setInterval(()=>{
           if(_myRegistryConn&&_myRegistryConn.open) _myRegistryConn.send({type:'update',code:MP.roomCode,playerCount:Object.keys(MP.players).length});
@@ -4219,21 +4235,33 @@ function _becomeRegistry(){
     _registryPeer=regPeer;
   });
   regPeer.on('connection',(conn)=>{
+    let _connCode=null; // track which room this connection registered
     conn.on('data',(data)=>{
       if(data.type==='register'){
+        _connCode=data.code;
         _registryRooms[data.code]={hostName:data.hostName,playerCount:data.playerCount,ts:Date.now()};
       } else if(data.type==='update'){
-        if(_registryRooms[data.code]) _registryRooms[data.code].playerCount=data.playerCount;
+        if(_registryRooms[data.code]){
+          _registryRooms[data.code].playerCount=data.playerCount;
+          _registryRooms[data.code].ts=Date.now(); // refresh TTL on every heartbeat
+        }
       } else if(data.type==='queryRooms'){
-        // Clean stale rooms (>2 min)
+        // Clean stale rooms (>2 min without heartbeat)
         const now=Date.now();
         Object.keys(_registryRooms).forEach(k=>{ if(now-_registryRooms[k].ts>120000) delete _registryRooms[k]; });
         conn.send({type:'roomList',rooms:Object.entries(_registryRooms).map(([code,rm])=>({code,...rm}))});
       } else if(data.type==='unregister'){
         delete _registryRooms[data.code];
+        _connCode=null;
       }
     });
-    conn.on('close',()=>{});
+    conn.on('close',()=>{
+      // Auto-remove room when host disconnects without explicit unregister
+      if(_connCode) delete _registryRooms[_connCode];
+    });
+    conn.on('error',()=>{
+      if(_connCode) delete _registryRooms[_connCode];
+    });
   });
   regPeer.on('error',()=>{});
 }
