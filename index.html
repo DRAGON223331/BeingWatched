@@ -3608,6 +3608,8 @@ function showLobbyScreen(){
   updateMpStartHint();
   buildLobbyScene();
   MP.lobbyActive=true;
+  MP.lobbyAvatars={};       // reset avatar map for fresh scene
+  updateLobbyAvatars();     // create avatars immediately (don't wait for sync tick)
   // Bind lobby controls
   bindLobbyControls();
   lobbyLoop();
@@ -3763,7 +3765,7 @@ function updateLobbyAvatars(){
   if(!MP.lobbyScene) return;
   const myId=MP.peer?.id;
   Object.entries(MP.players).forEach(([pid,p],i)=>{
-    if(pid===myId||p.isLocal) return;
+    if(pid===myId) return; // skip only MY own avatar
     if(MP.lobbyAvatars[pid]) return; // already created
     const col=PLAYER_COLORS[p.color%PLAYER_COLORS.length];
     const g=new THREE.Group();
@@ -3846,7 +3848,7 @@ function lobbyLoop(ts=0){
     const myId=MP.peer?.id;
     if(myId&&MP.players[myId]){ MP.players[myId].lobbyX=MP.lobbyPPos.x; MP.players[myId].lobbyZ=MP.lobbyPPos.z; }
     const posData={ type:'lobbyPos', x:MP.lobbyPPos.x, z:MP.lobbyPPos.z };
-    if(MP.isHost) mpBroadcast({...posData}); else mpSendToHost(posData);
+    if(MP.isHost) mpBroadcast({...posData, peerId:MP.peer.id}); else mpSendToHost(posData);
     // Update lobby avatar positions from data
     Object.entries(MP.players).forEach(([pid,p])=>{
       if(MP.lobbyAvatars[pid]&&p.lobbyX!==undefined) MP.lobbyAvatars[pid].position.set(p.lobbyX,0,p.lobbyZ);
