@@ -672,6 +672,7 @@ let batteryCharge=3.0; // 0-3, each unit = 40s of flashlight use
 let batteryItems=[]; // {mesh,x,z,collected}
 let backpackVisible=false;
 let rKeyHeld=false;
+let _syncingPickup=false; // Prevents re-broadcasting synced item pickups
 
 // ── SAFE ROOM & CHESTS ──
 const SAFE_GX=Math.floor(MS/2)+2;
@@ -694,7 +695,7 @@ const M={mesh:null,x:0,z:0,path:[],pi:0,lastPath:-99,awake:true,stalk:false,last
 const S={mesh:null,x:0,z:0,active:false,watched:false};
 
 // ══ MAZE ══
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=0|seededRand()*(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 function genMaze(){
   const g=Array.from({length:MS},()=>new Array(MS).fill(1));
   const vis=Array.from({length:MR},()=>new Array(MR).fill(false));
@@ -1428,6 +1429,8 @@ function buildMazeFurniture(){
 
 // ══ BUILD SCENE ══
 function buildScene(){
+  // ── In multiplayer, seed from host so ALL players get identical maze + items ──
+  setSeed(MP.enabled ? (MP.mazeSeed || 1) : (Math.floor(Math.random()*999999)+1));
   grid=genMaze();
 
   // ── Carve safe room (3×3 open area) ──
@@ -2106,6 +2109,11 @@ function collectKeyAtIndex(i){
   tone(980,1320,.07,'triangle',.07,.02);
   updateKeyHUD();
   unlockExitState();
+  // ── Broadcast to other players ──
+  if(MP.enabled && !_syncingPickup){
+    const msg={type:'itemPickup',item:'key',index:i};
+    if(MP.isHost) mpBroadcast(msg); else mpSendToHost(msg);
+  }
 
   if(keysCollected===1){
     M.stalk=true;
@@ -2192,6 +2200,11 @@ function collectBatteryAtIndex(i){
   // Respawn one new battery immediately
   const nb=spawnOneBattery();
   if(nb) batteryItems[i]=nb;
+  // ── Broadcast to other players ──
+  if(MP.enabled && !_syncingPickup){
+    const msg={type:'itemPickup',item:'battery',index:i};
+    if(MP.isHost) mpBroadcast(msg); else mpSendToHost(msg);
+  }
 }
 
 function updateBatteryHUD(){
@@ -2342,6 +2355,7 @@ function buildSafeRoomDoor(){
 }
 
 function openSafeRoomDoor(){
+  if(safeRoomDoorOpen) return;
   safeRoomDoorOpen=true;
   const gl=safeRoomDoorPivot&&safeRoomDoorPivot.getObjectByName('doorLockGlow');
   if(gl)gl.intensity=0;
@@ -2356,6 +2370,11 @@ function openSafeRoomDoor(){
   tone(900,1400,0.08,'triangle',0.09,0.3);
   tone(1400,1800,0.06,'triangle',0.07,0.38);
   showToast('\u{1F3E0} فتحت باب الغرفة الآمنة!',2600);
+  // ── Broadcast to other players ──
+  if(MP.enabled && !_syncingPickup){
+    const msg={type:'itemPickup',item:'safeRoomDoor'};
+    if(MP.isHost) mpBroadcast(msg); else mpSendToHost(msg);
+  }
 }
 
 function isDoorBlocked(wx,wz){
@@ -2440,6 +2459,11 @@ function openChest(i){
   } else {
     showToast('📦 الصندوق فاضي...',1600);
     tone(200,140,.2,'sine',.04);
+  }
+  // ── Broadcast to other players ──
+  if(MP.enabled && !_syncingPickup){
+    const msg={type:'itemPickup',item:'chest',index:i,hasBattery:chest.hasBattery};
+    if(MP.isHost) mpBroadcast(msg); else mpSendToHost(msg);
   }
 }
 
@@ -2592,6 +2616,11 @@ function gameLoop(ts){
       tone(880,1320,0.08,'triangle',0.09,0.12);
       tone(1320,1760,0.07,'triangle',0.08,0.22);
       showToast('\uD83D\uDDDD\uFE0F وجدت المفتاح الأخضر! اذهب للغرفة الآمنة',3200);
+      // ── Broadcast to other players ──
+      if(MP.enabled && !_syncingPickup){
+        const msg={type:'itemPickup',item:'greenKey'};
+        if(MP.isHost) mpBroadcast(msg); else mpSendToHost(msg);
+      }
     } else if(greenKeyItem.mesh&&greenKeyItem.mesh.userData&&greenKeyItem.mesh.userData.animate){
       greenKeyItem.mesh.userData.animate(elapsed);
     }
@@ -3288,6 +3317,11 @@ function mpHandlePlayerMsg(pid,data){
       if(MP.players[pid]) MP.players[pid].won=true;
       mpBroadcast({ type:'won', peerId:pid, name:MP.players[pid].name });
       break;
+    case 'itemPickup':
+      // Apply on host, relay to all other players
+      mpApplyItemPickup(data);
+      mpBroadcastExcept(pid,{...data});
+      break;
     case 'join':
       if(MP.players[pid]) MP.players[pid].name=data.name;
       break;
@@ -3345,6 +3379,10 @@ function mpHandleHostMsg(data){
       if(MP.players[data.peerId]){ MP.players[data.peerId].won=true; if(MP.players[data.peerId].mesh) MP.players[data.peerId].mesh.visible=false; }
       showToast('🏆 '+(data.name||'لاعب')+' هرب من المتاهة!');
       break;
+    case 'itemPickup':
+      // Apply item pickup event from another player
+      mpApplyItemPickup(data);
+      break;
     case 'hostChanged':
       if(data.newHostId===MP.peer.id){
         MP.isHost=true;
@@ -3382,6 +3420,53 @@ function mpHandleHostLeft(){
       showToast('👑 أنت الهوست الجديد!',3000);
     },800);
   }
+}
+
+// ── Apply an item pickup event received from another player ──
+function mpApplyItemPickup(data){
+  _syncingPickup=true;
+  try{
+    if(data.item==='key'){
+      const item=keyItems[data.index];
+      if(item&&!item.collected){
+        item.collected=true;
+        keysCollected++;
+        if(item.mesh&&scene)scene.remove(item.mesh);
+        updateKeyHUD();
+        unlockExitState();
+        if(keysCollected===1){
+          M.stalk=true;M.lastPath=-99;M.path=[];M.pi=0;M.repath=0;
+          M.lastTargetGX=-1;M.lastTargetGZ=-1;
+          monsterRadarStart=gameElapsed;
+          if(M.mesh)M.mesh.visible=true;
+          showToast('⚠ الوحش بدأ في المطاردة',2000);
+        }
+      }
+    } else if(data.item==='battery'){
+      const item=batteryItems[data.index];
+      if(item&&!item.collected){
+        item.collected=true;
+        if(item.mesh&&scene)scene.remove(item.mesh);
+        const nb=spawnOneBattery();
+        if(nb)batteryItems[data.index]=nb;
+      }
+    } else if(data.item==='greenKey'){
+      if(greenKeyItem&&!greenKeyItem.collected){
+        greenKeyItem.collected=true;
+        greenKeyCollected=true;
+        if(scene&&greenKeyItem.mesh)scene.remove(greenKeyItem.mesh);
+      }
+    } else if(data.item==='chest'){
+      const chest=chestItems[data.index];
+      if(chest&&!chest.opened){
+        chest.opened=true;
+        const lidPivot=chest.mesh&&chest.mesh.userData&&chest.mesh.userData.lidPivot;
+        if(lidPivot){let angle=0;const anim=setInterval(()=>{angle+=0.08;lidPivot.rotation.x=-Math.min(angle,Math.PI*.7);if(angle>=Math.PI*.7)clearInterval(anim);},16);}
+      }
+    } else if(data.item==='safeRoomDoor'){
+      if(!safeRoomDoorOpen)openSafeRoomDoor();
+    }
+  }finally{_syncingPickup=false;}
 }
 
 // ── Broadcast helpers ──
