@@ -3457,7 +3457,11 @@ function mpHandlePlayerMsg(pid,data){
       mpBroadcastExcept(pid,{...data});
       break;
     case 'join':
-      if(MP.players[pid]) MP.players[pid].name=data.name;
+      if(MP.players[pid]){
+        MP.players[pid].name=(data.name||'').trim()||MP.players[pid].name||'لاعب';
+        updateLobbyPlayerList();
+        updateMpPlayerCount();
+      }
       break;
   }
 }
@@ -4520,6 +4524,7 @@ function joinRoomFromSearch(code){
   // Auto-join
   const mpNameInp=document.getElementById('mpNameInput');
   if(!mpNameInp?.value?.trim()) mpNameInp.value='لاعب';
+  MP.localName=getMpName();
   showMpLoading('⏳ جاري الاتصال...');
   loadPeerJS(()=> mpJoinRoom(code));
 }
