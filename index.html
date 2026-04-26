@@ -34,7 +34,7 @@ canvas{
   text-align:center;z-index:50
 }
 
-#startScreen{background:radial-gradient(ellipse at center,#1a110f 0%,#050505 100%);color:#f4f4f4}
+#startScreen{background:radial-gradient(ellipse at center,#1a110f 0%,#050505 100%);color:#f4f4f4;overflow-y:auto;padding:12px 8px}
 #startScreen h1{font-size:3.4em;text-shadow:0 0 12px rgba(255,255,255,.1),0 0 18px rgba(0,0,0,.6);margin-bottom:10px;letter-spacing:2px;color:#fafafa}
 .tagline{font-size:1.05em;color:#cfcfcf;margin:6px 0;letter-spacing:1px}
 .rules{color:#efefef;font-size:1em;margin:18px 0;line-height:2;max-width:440px;border:1px solid rgba(255,255,255,.12);padding:14px 16px;background:rgba(0,0,0,.28);text-align:right;direction:rtl}
@@ -512,71 +512,84 @@ canvas{
 .mobBtn.active{background:rgba(255,255,255,.28);transform:scale(.93);}
 
 #mobileSprintBtn{
-  bottom:155px;right:20px;
+  bottom:155px;left:20px;
   width:68px;height:68px;
   border-color:rgba(255,200,80,.45);
 }
 #mobileSprintBtn.active{background:rgba(255,200,80,.25);}
 
 #mobileInteractBtn{
-  bottom:234px;right:20px;
+  bottom:155px;left:104px;
   width:62px;height:62px;
   border-color:rgba(80,255,140,.4);
 }
 #mobileInteractBtn.active{background:rgba(80,255,140,.2);}
 
 #mobileBackpackBtn{
-  bottom:234px;right:96px;
+  bottom:155px;left:182px;
   width:62px;height:62px;
   border-color:rgba(180,140,255,.4);
 }
 
 /* ══ MOBILE RESPONSIVE SCALING ══ */
 @media(max-width:480px){
+  /* ── Start screen fits without scrolling ── */
+  #startScreen h1{font-size:2.2em!important;margin-bottom:6px!important}
+  .tagline{font-size:.88em!important;margin:4px 0!important}
+  .rules{font-size:.82em!important;margin:10px 0!important;padding:10px 12px!important;line-height:1.7!important;max-width:90vw!important}
+  .ctrlBox{font-size:.72em!important;margin:6px 0!important;max-width:90vw!important;line-height:1.6!important}
+  #menuButtons{margin-top:12px!important;gap:8px!important}
+  .menuBtn{padding:11px 14px!important;font-size:.92em!important;width:min(240px,80vw)!important}
+
   /* Minimap */
   #minimap{width:115px!important;height:115px!important;top:40px!important}
   #mapTitle{width:115px!important;font-size:.8em!important;top:12px!important}
 
-  /* Objective panel */
+  /* Objective panel — narrower so buttons don't overlap */
   #objectivePanel{
-    font-size:.78em!important;
-    width:min(185px,42vw)!important;
-    line-height:1.55!important;
+    font-size:.75em!important;
+    width:min(170px,38vw)!important;
+    line-height:1.5!important;
+    top:14px!important;
+    right:10px!important;
   }
-  #objectivePanel .title{font-size:1.15em!important;margin-bottom:5px!important}
-  #objectivePanel .count{font-size:1.25em!important}
+  #objectivePanel .title{font-size:1.1em!important;margin-bottom:4px!important}
+  #objectivePanel .count{font-size:1.2em!important}
+  #objectivePanel .objectiveKeys{margin-top:10px!important}
 
   /* Battery HUD */
   #batteryHUD{bottom:10px!important;right:10px!important}
-  .batCell{width:26px!important;height:11px!important}
-  .batLabel{font-size:.72em!important}
+  .batCell{width:24px!important;height:10px!important}
+  .batLabel{font-size:.7em!important}
 
   /* Stamina bar */
   #staminaBox{
-    width:min(180px,52vw)!important;
+    width:min(160px,48vw)!important;
     height:11px!important;
-    bottom:10px!important
+    bottom:10px!important;
+    left:50%!important;
+    transform:translateX(-50%)!important;
   }
-  #staminaLabel{bottom:44px!important;font-size:.88em!important}
+  #staminaLabel{bottom:44px!important;font-size:.82em!important}
 
   /* Interact / alert prompts */
-  #interactPrompt{font-size:.88em!important;bottom:82px!important}
-  #monsterAlert{font-size:.82em!important;bottom:86px!important}
+  #interactPrompt{font-size:.85em!important;bottom:82px!important}
+  #monsterAlert{font-size:.8em!important;bottom:86px!important}
 
   /* Toast */
-  #toastMessage{font-size:.88em!important;min-width:min(260px,78vw)!important}
+  #toastMessage{font-size:.85em!important;min-width:min(250px,76vw)!important}
 
-  /* Joystick — bigger for easier thumb reach */
-  #joyZone{width:110px!important;height:110px!important}
+  /* Joystick */
+  #joyZone{width:110px!important;height:110px!important;bottom:18px!important;left:18px!important}
   #joyThumb{width:40px!important;height:40px!important}
 
   /* Flashlight button */
-  #flBtn{width:64px!important;height:64px!important;font-size:1.5em!important}
+  #flBtn{width:62px!important;height:62px!important;font-size:1.4em!important;bottom:18px!important;right:18px!important}
 
-  /* Mobile action buttons — slightly smaller */
-  #mobileSprintBtn{width:62px!important;height:62px!important;bottom:148px!important;right:16px!important}
-  #mobileInteractBtn{width:56px!important;height:56px!important;bottom:222px!important;right:16px!important}
-  #mobileBackpackBtn{width:56px!important;height:56px!important;bottom:222px!important;right:86px!important}
+  /* Mobile action buttons — above joystick, left side */
+  #mobileSprintBtn{width:58px!important;height:58px!important;bottom:148px!important;left:18px!important;right:auto!important}
+  #mobileInteractBtn{width:54px!important;height:54px!important;bottom:150px!important;left:90px!important;right:auto!important}
+  #mobileBackpackBtn{width:54px!important;height:54px!important;bottom:150px!important;left:158px!important;right:auto!important}
 }
 
 </style>
