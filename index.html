@@ -531,6 +531,162 @@ canvas{
   border-color:rgba(180,140,255,.4);
 }
 
+/* ══ INTRO OVERLAY ══ */
+#introOverlay{
+  position:fixed;inset:0;z-index:9999;
+  background:#000;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;
+  overflow:hidden;
+  pointer-events:all;
+}
+#introOverlay.fade-out{
+  animation:introFadeOut .9s ease-in forwards;
+}
+@keyframes introFadeOut{
+  0%{opacity:1}
+  100%{opacity:0;pointer-events:none}
+}
+
+/* Static noise background */
+#introNoise{
+  position:absolute;inset:0;
+  opacity:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size:180px 180px;
+  mix-blend-mode:overlay;
+  animation:noiseAnim 12s steps(1) infinite;
+}
+@keyframes noiseAnim{
+  0%{background-position:0 0}10%{background-position:-30px 10px}20%{background-position:20px -15px}
+  30%{background-position:-10px 25px}40%{background-position:35px 5px}50%{background-position:-20px -20px}
+  60%{background-position:10px 30px}70%{background-position:-35px 0}80%{background-position:15px -10px}
+  90%{background-position:-5px 20px}100%{background-position:0 0}
+}
+
+/* Red flicker line */
+#introScanFlicker{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    to bottom,
+    transparent 0,transparent 2px,
+    rgba(255,0,0,.03) 2px,rgba(255,0,0,.03) 4px
+  );
+  pointer-events:none;
+}
+
+/* Center content */
+#introContent{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;
+  gap:0;
+  text-align:center;
+}
+
+/* Eye icon */
+#introEye{
+  font-size:min(22vw,160px);
+  line-height:1;
+  opacity:0;
+  filter:drop-shadow(0 0 0px #ff0000);
+  animation:eyeReveal 1.2s ease-out 1.0s forwards;
+}
+@keyframes eyeReveal{
+  0%{opacity:0;transform:scale(2.5);filter:drop-shadow(0 0 0px #ff0000)}
+  40%{opacity:1;transform:scale(0.92);filter:drop-shadow(0 0 40px #cc0000)}
+  70%{transform:scale(1.06);filter:drop-shadow(0 0 28px #880000)}
+  100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px #660000)}
+}
+
+/* Title text */
+#introTitle{
+  font-family:Tahoma,Arial,sans-serif;
+  font-size:min(16vw,110px);
+  font-weight:700;
+  color:#f0f0f0;
+  letter-spacing:18px;
+  opacity:0;
+  text-shadow:0 0 0px rgba(255,255,255,0);
+  margin-top:-10px;
+  direction:rtl;
+  animation:titleReveal 1.1s ease-out 1.9s forwards;
+}
+@keyframes titleReveal{
+  0%{opacity:0;letter-spacing:60px;text-shadow:0 0 0 rgba(255,255,255,0)}
+  50%{opacity:.8;letter-spacing:20px}
+  100%{opacity:1;letter-spacing:18px;text-shadow:0 0 30px rgba(255,255,255,.08),0 0 80px rgba(200,0,0,.12)}
+}
+
+/* Tagline */
+#introTagline{
+  font-family:Tahoma,Arial,sans-serif;
+  font-size:min(4vw,18px);
+  color:rgba(200,80,80,.0);
+  letter-spacing:6px;
+  direction:rtl;
+  margin-top:18px;
+  opacity:0;
+  animation:taglineReveal .8s ease-out 3.0s forwards;
+}
+@keyframes taglineReveal{
+  0%{opacity:0;color:rgba(200,80,80,0)}
+  100%{opacity:1;color:rgba(200,80,80,.75)}
+}
+
+/* Glitch slices on title */
+#introTitle.glitch{animation:titleReveal 1.1s ease-out 1.9s forwards, glitch .12s steps(2) 3.5s 3;}
+@keyframes glitch{
+  0%{clip-path:inset(20% 0 60% 0);transform:translateX(-8px)}
+  25%{clip-path:inset(60% 0 10% 0);transform:translateX(8px)}
+  50%{clip-path:inset(40% 0 35% 0);transform:translateX(-4px)}
+  75%{clip-path:inset(10% 0 75% 0);transform:translateX(6px)}
+  100%{clip-path:inset(0 0 0 0);transform:translateX(0)}
+}
+
+/* Bottom "انقر للمتابعة" */
+#introContinue{
+  position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  font-family:Tahoma,Arial,sans-serif;
+  font-size:min(3.5vw,14px);
+  color:rgba(255,255,255,.28);
+  letter-spacing:5px;
+  direction:rtl;
+  opacity:0;
+  animation:blinkIn .6s ease-out 4.2s forwards;
+  white-space:nowrap;
+  cursor:pointer;
+}
+@keyframes blinkIn{
+  0%{opacity:0}100%{opacity:1}
+}
+#introContinue.pulse{
+  animation:blinkIn .6s ease-out 4.2s forwards, blink 2s infinite 4.8s;
+}
+
+/* Blood drip line */
+#introLine{
+  width:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(200,0,0,.6),transparent);
+  margin-top:10px;
+  animation:lineGrow 1.2s ease-out 2.7s forwards;
+}
+@keyframes lineGrow{
+  0%{width:0;opacity:0}
+  100%{width:min(320px,70vw);opacity:1}
+}
+
+/* White flash on load */
+#introFlash{
+  position:absolute;inset:0;
+  background:#fff;
+  opacity:1;
+  animation:flashOut .5s ease-out 0.1s forwards;
+  pointer-events:none;
+}
+@keyframes flashOut{
+  0%{opacity:.7}100%{opacity:0}
+}
+
 /* ══ MOBILE RESPONSIVE SCALING ══ */
 @media(max-width:520px){
 
@@ -574,6 +730,20 @@ canvas{
 
 </head>
 <body>
+<!-- ══ INTRO OVERLAY ══ -->
+<div id="introOverlay">
+  <div id="introFlash"></div>
+  <div id="introNoise"></div>
+  <div id="introScanFlicker"></div>
+  <div id="introContent">
+    <div id="introEye">👁</div>
+    <div id="introTitle" class="glitch">مُراقب</div>
+    <div id="introLine"></div>
+    <div id="introTagline">— هو يراقبك... دائماً —</div>
+  </div>
+  <div id="introContinue" class="pulse">[ انقر للمتابعة ]</div>
+</div>
+
 <canvas id="c"></canvas>
 <div id="scanlines"></div>
 <div id="vignette"></div>
@@ -627,7 +797,7 @@ canvas{
 </div>
 
 <!-- SCREENS -->
-<div id="startScreen" class="screen">
+<div id="startScreen" class="screen" style="display:none">
   <h1>👁 مُراقب</h1>
   <div class="tagline">— هو يراقبك... دائماً —</div>
   <div class="rules">
@@ -837,6 +1007,57 @@ canvas{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
+
+// ══ INTRO ══
+(function(){
+  const overlay = document.getElementById('introOverlay');
+  const noise   = document.getElementById('introNoise');
+  let introDone = false;
+
+  function showNoise(){
+    noise.style.opacity = '0.09';
+  }
+
+  function finishIntro(){
+    if(introDone) return;
+    introDone = true;
+
+    // Rapid glitch flicker before exit
+    let t=0;
+    const flicker = setInterval(()=>{
+      overlay.style.opacity = (t%2===0) ? '0' : '1';
+      t++;
+      if(t>5){
+        clearInterval(flicker);
+        overlay.style.opacity='1';
+        overlay.classList.add('fade-out');
+        setTimeout(()=>{
+          overlay.style.display='none';
+          const ss = document.getElementById('startScreen');
+          ss.style.display='flex';
+          ss.style.opacity='0';
+          ss.style.transition='opacity .7s ease';
+          requestAnimationFrame(()=>{ ss.style.opacity='1'; });
+        }, 900);
+      }
+    }, 60);
+  }
+
+  // Noise kicks in slightly after eye appears
+  setTimeout(showNoise, 1200);
+
+  // Enable click/tap to continue after tagline appears
+  setTimeout(()=>{
+    overlay.addEventListener('click', finishIntro, {once:true});
+    overlay.addEventListener('touchend', finishIntro, {once:true});
+    // Also allow any key
+    document.addEventListener('keydown', finishIntro, {once:true});
+  }, 4000);
+
+  // Auto-advance after 6.5s if user does nothing
+  setTimeout(finishIntro, 6500);
+})();
+
 
 // ══ CONFIG ══
 const MR=9, MS=2*MR+1, CS=4, PH=1.65;
