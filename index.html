@@ -944,7 +944,7 @@ function genMaze(){
 function inBounds(x,y){return x>=0&&x<MS&&y>=0&&y<MS}
 function w2g(wx,wz){return[0|wx/CS,0|wz/CS]}
 function g2w(gx,gz){return{x:gx*CS+CS/2,z:gz*CS+CS/2}}
-function isWall(wx,wz){const[gx,gz]=[0|wx/CS,0|wz/CS];if(!inBounds(gx,gz))return true;return grid[gz][gx]===1}
+function isWall(wx,wz){const[gx,gz]=[0|wx/CS,0|wz/CS];if(!inBounds(gx,gz))return true;return grid[gz][gx]>=1}
 
 // ── SAFE ROOM HELPERS ──
 function inSafeRoom(gx,gz){return Math.abs(gx-SAFE_GX)<=1&&Math.abs(gz-SAFE_GZ)<=1;}
@@ -1521,11 +1521,18 @@ function buildMazeFurniture(){
     }
   }
   shuffle(openCells);
+  // خلايا التقاطعات فقط (3+ جيران فاضيين) لوضع الأثاث الصلب فيها
+  const intersectionCells=openCells.filter(([gx,gz])=>{
+    const n=[[gx+1,gz],[gx-1,gz],[gx,gz+1],[gx,gz-1]]
+      .filter(([nx,nz])=>inBounds(nx,nz)&&grid[nz][nx]===0).length;
+    return n>=3;
+  });
 
   let placed=0;
+  let iPlaced=0;
   // ── Desks ──
-  for(let i=0;i<10&&placed<openCells.length;i++,placed++){
-    const [gx,gz]=openCells[placed];
+  for(let i=0;i<10&&iPlaced<intersectionCells.length;i++,iPlaced++){
+    const [gx,gz]=intersectionCells[iPlaced];
     const {x:wx,z:wz}=g2w(gx,gz);
     const desk=new THREE.Group();
     // Tabletop
@@ -1554,6 +1561,7 @@ function buildMazeFurniture(){
     desk.rotation.y=Math.floor(Math.random()*4)*Math.PI/2;
     desk.position.set(wx,0,wz);
     scene.add(desk);
+    grid[gz][gx]=2; // حاجز أثاث — يمنع المرور
   }
 
   // ── Blackboards / Notice boards ──
@@ -1591,8 +1599,8 @@ function buildMazeFurniture(){
   }
 
   // ── Filing cabinets ──
-  for(let i=0;i<5&&placed<openCells.length;i++,placed++){
-    const [gx,gz]=openCells[placed];
+  for(let i=0;i<5&&iPlaced<intersectionCells.length;i++,iPlaced++){
+    const [gx,gz]=intersectionCells[iPlaced];
     const {x:wx,z:wz}=g2w(gx,gz);
     const cab=new THREE.Group();
     const body=new THREE.Mesh(new THREE.BoxGeometry(.55,1.2,.45),metalMat);
@@ -1606,6 +1614,7 @@ function buildMazeFurniture(){
     cab.rotation.y=Math.random()*Math.PI*2;
     cab.position.set(wx,0,wz);
     scene.add(cab);
+    grid[gz][gx]=2; // حاجز أثاث — يمنع المرور
   }
 
   // ── Overturned chairs ──
