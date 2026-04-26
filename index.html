@@ -495,6 +495,90 @@ canvas{
   animation:blink 1.8s infinite;
 }
 
+/* ══ MOBILE ACTION BUTTONS ══ */
+.mobBtn{
+  position:fixed;z-index:20;display:none;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.28);
+  background:rgba(0,0,0,.52);
+  color:#fff;touch-action:none;user-select:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1.5em;line-height:1;
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
+  backdrop-filter:blur(2px);
+  transition:background .12s, transform .1s;
+}
+.mobBtn span{font-size:.38em;letter-spacing:1px;margin-top:3px;opacity:.8}
+.mobBtn.active{background:rgba(255,255,255,.28);transform:scale(.93);}
+
+#mobileSprintBtn{
+  bottom:155px;right:20px;
+  width:68px;height:68px;
+  border-color:rgba(255,200,80,.45);
+}
+#mobileSprintBtn.active{background:rgba(255,200,80,.25);}
+
+#mobileInteractBtn{
+  bottom:234px;right:20px;
+  width:62px;height:62px;
+  border-color:rgba(80,255,140,.4);
+}
+#mobileInteractBtn.active{background:rgba(80,255,140,.2);}
+
+#mobileBackpackBtn{
+  bottom:234px;right:96px;
+  width:62px;height:62px;
+  border-color:rgba(180,140,255,.4);
+}
+
+/* ══ MOBILE RESPONSIVE SCALING ══ */
+@media(max-width:480px){
+  /* Minimap */
+  #minimap{width:115px!important;height:115px!important;top:40px!important}
+  #mapTitle{width:115px!important;font-size:.8em!important;top:12px!important}
+
+  /* Objective panel */
+  #objectivePanel{
+    font-size:.78em!important;
+    width:min(185px,42vw)!important;
+    line-height:1.55!important;
+  }
+  #objectivePanel .title{font-size:1.15em!important;margin-bottom:5px!important}
+  #objectivePanel .count{font-size:1.25em!important}
+
+  /* Battery HUD */
+  #batteryHUD{bottom:10px!important;right:10px!important}
+  .batCell{width:26px!important;height:11px!important}
+  .batLabel{font-size:.72em!important}
+
+  /* Stamina bar */
+  #staminaBox{
+    width:min(180px,52vw)!important;
+    height:11px!important;
+    bottom:10px!important
+  }
+  #staminaLabel{bottom:44px!important;font-size:.88em!important}
+
+  /* Interact / alert prompts */
+  #interactPrompt{font-size:.88em!important;bottom:82px!important}
+  #monsterAlert{font-size:.82em!important;bottom:86px!important}
+
+  /* Toast */
+  #toastMessage{font-size:.88em!important;min-width:min(260px,78vw)!important}
+
+  /* Joystick — bigger for easier thumb reach */
+  #joyZone{width:110px!important;height:110px!important}
+  #joyThumb{width:40px!important;height:40px!important}
+
+  /* Flashlight button */
+  #flBtn{width:64px!important;height:64px!important;font-size:1.5em!important}
+
+  /* Mobile action buttons — slightly smaller */
+  #mobileSprintBtn{width:62px!important;height:62px!important;bottom:148px!important;right:16px!important}
+  #mobileInteractBtn{width:56px!important;height:56px!important;bottom:222px!important;right:16px!important}
+  #mobileBackpackBtn{width:56px!important;height:56px!important;bottom:222px!important;right:86px!important}
+}
+
 </style>
 
 </head>
@@ -725,6 +809,11 @@ canvas{
 <!-- TOUCH -->
 <div id="joyZone"><div id="joyBase"><div id="joyThumb"></div></div></div>
 <div id="flBtn">🔦<span id="flBtnTxt">OFF</span></div>
+
+<!-- MOBILE ACTION BUTTONS -->
+<div id="mobileSprintBtn" class="mobBtn">🏃<span>اندفاع</span></div>
+<div id="mobileInteractBtn" class="mobBtn">[ F ]<span>تفاعل</span></div>
+<div id="mobileBackpackBtn" class="mobBtn">🎒<span>حقيبة</span></div>
 
 <!-- BATTERY HUD -->
 <div id="batteryHUD">
@@ -3117,6 +3206,10 @@ function _showTouchControls(){
   if(joy&&joy.style.display==='none') joy.style.display='block';
   if(fl&&fl.style.display==='none') fl.style.display='flex';
   if(ch) ch.style.display='none';
+  ['mobileSprintBtn','mobileInteractBtn','mobileBackpackBtn'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&el.style.display==='none') el.style.display='flex';
+  });
 }
 
 function _hideTouchControls(){
@@ -3128,6 +3221,10 @@ function _hideTouchControls(){
   if(joy) joy.style.display='none';
   if(fl) fl.style.display='none';
   if(ch) ch.style.display='block';
+  ['mobileSprintBtn','mobileInteractBtn','mobileBackpackBtn'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
 }
 
 function _initDynamicInputDetection(){
@@ -3192,16 +3289,61 @@ function startGame(){
     document.getElementById('joyZone').style.display='block';
     document.getElementById('flBtn').style.display='flex';
     document.getElementById('crosshair').style.display='none';
+    document.getElementById('mobileSprintBtn').style.display='flex';
+    document.getElementById('mobileInteractBtn').style.display='flex';
+    document.getElementById('mobileBackpackBtn').style.display='flex';
     _touchControlsVisible=true;
   } else {
     document.getElementById('joyZone').style.display='none';
     document.getElementById('flBtn').style.display='none';
+    document.getElementById('mobileSprintBtn').style.display='none';
+    document.getElementById('mobileInteractBtn').style.display='none';
+    document.getElementById('mobileBackpackBtn').style.display='none';
     _touchControlsVisible=false;
   }
   // Bind flashlight button for touch (works whether shown now or shown later dynamically)
   document.getElementById('flBtn').addEventListener('touchstart',e=>{
     e.preventDefault();e.stopPropagation();toggleFlashlight();
   },{passive:false});
+
+  // ── MOBILE ACTION BUTTONS ──
+  const spBtn=document.getElementById('mobileSprintBtn');
+  spBtn.addEventListener('touchstart',e=>{
+    e.preventDefault();e.stopPropagation();
+    keys['ShiftLeft']=true;spBtn.classList.add('active');
+  },{passive:false});
+  spBtn.addEventListener('touchend',e=>{
+    e.preventDefault();
+    keys['ShiftLeft']=false;spBtn.classList.remove('active');
+  },{passive:false});
+  spBtn.addEventListener('touchcancel',e=>{
+    keys['ShiftLeft']=false;spBtn.classList.remove('active');
+  },{passive:false});
+
+  const iaBtn=document.getElementById('mobileInteractBtn');
+  let _iaHeld=false;
+  iaBtn.addEventListener('touchstart',e=>{
+    e.preventDefault();e.stopPropagation();
+    keys['KeyF']=true;iaBtn.classList.add('active');
+  },{passive:false});
+  iaBtn.addEventListener('touchend',e=>{
+    e.preventDefault();
+    keys['KeyF']=false;iaBtn.classList.remove('active');
+    fKeyHeld=false;
+  },{passive:false});
+  iaBtn.addEventListener('touchcancel',e=>{
+    keys['KeyF']=false;iaBtn.classList.remove('active');
+    fKeyHeld=false;
+  },{passive:false});
+
+  let _bpHeld=false;
+  const bpBtn=document.getElementById('mobileBackpackBtn');
+  bpBtn.addEventListener('touchstart',e=>{
+    e.preventDefault();e.stopPropagation();
+    if(!_bpHeld){_bpHeld=true;toggleBackpack();}
+  },{passive:false});
+  bpBtn.addEventListener('touchend',e=>{e.preventDefault();_bpHeld=false;},{passive:false});
+  bpBtn.addEventListener('touchcancel',e=>{_bpHeld=false;},{passive:false});
   // Start dynamic detection for hybrid devices (e.g. laptop touchscreen)
   _initDynamicInputDetection();
 
