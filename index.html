@@ -880,7 +880,6 @@ const SAFE_GZ=Math.floor(MS*2/3)+1;
 const DOOR_GX=SAFE_GX+2;
 const DOOR_GZ=SAFE_GZ;
 let chestItems=[]; // {mesh,x,z,opened,lidMesh}
-let furnitureBoxes=[]; // {x1,z1,x2,z2} — صناديق الاصطدام للأثاث الصلب
 let fKeyHeld=false;
 
 // ── GREEN KEY / SAFE ROOM DOOR ──
@@ -946,14 +945,9 @@ function inBounds(x,y){return x>=0&&x<MS&&y>=0&&y<MS}
 function w2g(wx,wz){return[0|wx/CS,0|wz/CS]}
 function g2w(gx,gz){return{x:gx*CS+CS/2,z:gz*CS+CS/2}}
 function isWall(wx,wz){const[gx,gz]=[0|wx/CS,0|wz/CS];if(!inBounds(gx,gz))return true;return grid[gz][gx]===1}
-// يتحقق إذا الموضع داخل صندوق اصطدام قطعة أثاث
-function isFurnitureBlocked(x,z){
-  const P=0.32; // نفس هامش الـ player
-  for(const b of furnitureBoxes){
-    if(x+P>b.x1&&x-P<b.x2&&z+P>b.z1&&z-P<b.z2) return true;
-  }
-  return false;
-}
+let furnitureBoxes=[];
+function isFurnitureBlocked(x,z){for(const b of furnitureBoxes){if(x>b.x1&&x<b.x2&&z>b.z1&&z<b.z2)return true;}return false;}
+function addFurBox(wx,wz,hw,hd){furnitureBoxes.push({x1:wx-hw,z1:wz-hd,x2:wx+hw,z2:wz+hd});}
 
 // ── SAFE ROOM HELPERS ──
 function inSafeRoom(gx,gz){return Math.abs(gx-SAFE_GX)<=1&&Math.abs(gz-SAFE_GZ)<=1;}
@@ -1531,21 +1525,19 @@ function buildMazeFurniture(){
     }
   }
   shuffle(openCells);
-  // خلايا غير ممرات مستقيمة — مناسبة للأثاث (طريق مسدود أو تقاطع)
+  // solidCells = كل خلية مش ممر مستقيم (طريق مسدود، زاوية، أو تقاطع)
   const solidCells=openCells.filter(([gx,gz])=>{
     const L=inBounds(gx-1,gz)&&grid[gz][gx-1]===0;
     const R=inBounds(gx+1,gz)&&grid[gz][gx+1]===0;
     const U=inBounds(gx,gz-1)&&grid[gz-1][gx]===0;
     const D=inBounds(gx,gz+1)&&grid[gz+1][gx]===0;
-    // تجنّب الممرات المستقيمة (يمين-شمال فقط أو فوق-تحت فقط)
     return !((L&&R&&!U&&!D)||(!L&&!R&&U&&D));
   });
 
-  let placed=0;
-  let sPlaced=0;
+  let sP=0; // solidCells pointer — مشترك بين كل الأثاث
   // ── Desks ──
-  for(let i=0;i<10&&sPlaced<solidCells.length;i++,sPlaced++){
-    const [gx,gz]=solidCells[sPlaced];
+  for(let i=0;i<10&&sP<solidCells.length;i++,sP++){
+    const [gx,gz]=solidCells[sP];
     const {x:wx,z:wz}=g2w(gx,gz);
     const desk=new THREE.Group();
     // Tabletop
@@ -1574,12 +1566,12 @@ function buildMazeFurniture(){
     desk.rotation.y=Math.floor(Math.random()*4)*Math.PI/2;
     desk.position.set(wx,0,wz);
     scene.add(desk);
-    furnitureBoxes.push({x1:wx-.75,z1:wz-.4,x2:wx+.75,z2:wz+.4}); // صندوق اصطدام الطاولة
+    addFurBox(wx,wz,0.75,0.4);
   }
 
   // ── Blackboards / Notice boards ──
-  for(let i=0;i<6&&placed<openCells.length;i++,placed++){
-    const [gx,gz]=openCells[placed];
+  for(let i=0;i<6&&sP<solidCells.length;i++,sP++){
+    const [gx,gz]=solidCells[sP];
     const {x:wx,z:wz}=g2w(gx,gz);
     const angle=Math.floor(Math.random()*4)*Math.PI/2;
     const side=CS/2-.1;
@@ -1612,8 +1604,8 @@ function buildMazeFurniture(){
   }
 
   // ── Filing cabinets ──
-  for(let i=0;i<5&&sPlaced<solidCells.length;i++,sPlaced++){
-    const [gx,gz]=solidCells[sPlaced];
+  for(let i=0;i<5&&sP<solidCells.length;i++,sP++){
+    const [gx,gz]=solidCells[sP];
     const {x:wx,z:wz}=g2w(gx,gz);
     const cab=new THREE.Group();
     const body=new THREE.Mesh(new THREE.BoxGeometry(.55,1.2,.45),metalMat);
@@ -1627,13 +1619,22 @@ function buildMazeFurniture(){
     cab.rotation.y=Math.random()*Math.PI*2;
     cab.position.set(wx,0,wz);
     scene.add(cab);
-    furnitureBoxes.push({x1:wx-.32,z1:wz-.32,x2:wx+.32,z2:wz+.32}); // صندوق اصطدام الخزانة
+    addFurBox(wx,wz,0.35,0.35);
   }
 
   // ── Overturned chairs ──
-  for(let i=0;i<7&&placed<openCells.length;i++,placed++){
-    const [gx,gz]=openCells[placed];
+  for(let i=0;i<7&&sP<solidCells.length;i++,sP++){
+    const [gx,gz]=solidCells[sP];
     const {x:wx,z:wz}=g2w(gx,gz);
+    // ادفع الكرسي ناحية أقرب جدار بدل ما يكون في النص
+    const L=inBounds(gx-1,gz)&&grid[gz][gx-1]===1;
+    const R=inBounds(gx+1,gz)&&grid[gz][gx+1]===1;
+    const U=inBounds(gx,gz-1)&&grid[gz-1][gx]===1;
+    const D=inBounds(gx,gz+1)&&grid[gz+1][gx]===1;
+    const wallOffset=1.2;
+    const ox=L?-wallOffset:R?wallOffset:0;
+    const oz=U?-wallOffset:D?wallOffset:0;
+    const cx=wx+ox, cz=wz+oz;
     const chair=new THREE.Group();
     const seat=new THREE.Mesh(new THREE.BoxGeometry(.44,.05,.44),woodMat);
     chair.add(seat);
@@ -1643,15 +1644,16 @@ function buildMazeFurniture(){
       const leg=new THREE.Mesh(new THREE.BoxGeometry(.04,.46,.04),darkWoodMat);
       leg.position.set(lx,-.23,lz); chair.add(leg);
     }
-    // Random tilt — some are fallen over
     chair.rotation.set((Math.random()-.5)*1.4,Math.random()*Math.PI*2,(Math.random()-.5)*1.4);
-    chair.position.set(wx,.35+Math.random()*.2,wz);
+    chair.position.set(cx,.35+Math.random()*.2,cz);
     scene.add(chair);
+    addFurBox(cx,cz,0.3,0.3);
   }
 
-  // ── Floor debris (scattered papers) ──
-  for(let i=0;i<14&&placed<openCells.length;i++,placed++){
-    const [gx,gz]=openCells[placed];
+  // ── Floor debris (scattered papers) — أوراق على الأرض، بدون collision ──
+  let pP=0;
+  for(let i=0;i<14&&pP<openCells.length;i++,pP++){
+    const [gx,gz]=openCells[pP];
     const {x:wx,z:wz}=g2w(gx,gz);
     const paper=new THREE.Mesh(new THREE.PlaneGeometry(.28+Math.random()*.2,.36+Math.random()*.2),paperMat);
     paper.rotation.set(-Math.PI/2+(Math.random()-.5)*.25,Math.random()*Math.PI*2,0);
