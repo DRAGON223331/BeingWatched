@@ -945,9 +945,6 @@ function inBounds(x,y){return x>=0&&x<MS&&y>=0&&y<MS}
 function w2g(wx,wz){return[0|wx/CS,0|wz/CS]}
 function g2w(gx,gz){return{x:gx*CS+CS/2,z:gz*CS+CS/2}}
 function isWall(wx,wz){const[gx,gz]=[0|wx/CS,0|wz/CS];if(!inBounds(gx,gz))return true;return grid[gz][gx]===1}
-let furnitureBoxes=[];
-function isFurnitureBlocked(x,z){for(const b of furnitureBoxes){if(x>b.x1&&x<b.x2&&z>b.z1&&z<b.z2)return true;}return false;}
-function addFurBox(wx,wz,hw,hd){furnitureBoxes.push({x1:wx-hw,z1:wz-hd,x2:wx+hw,z2:wz+hd});}
 
 // ── SAFE ROOM HELPERS ──
 function inSafeRoom(gx,gz){return Math.abs(gx-SAFE_GX)<=1&&Math.abs(gz-SAFE_GZ)<=1;}
@@ -1507,161 +1504,6 @@ function makePlayerHeadTexture(hexColor){
   return tex;
 }
 
-// ══ MAZE FURNITURE ══
-function buildMazeFurniture(){
-  const woodMat=new THREE.MeshLambertMaterial({color:0x3d2a15,emissive:0x060402});
-  const darkWoodMat=new THREE.MeshLambertMaterial({color:0x1e1208,emissive:0x020100});
-  const metalMat=new THREE.MeshLambertMaterial({color:0x1c1c1c,emissive:0x050505});
-  const paperMat=new THREE.MeshLambertMaterial({color:0xd8cdb0,emissive:0x050502});
-  const boardMat=new THREE.MeshLambertMaterial({color:0x0a1a0a,emissive:0x030803});
-  const chalkMat=new THREE.MeshBasicMaterial({color:0xccccaa});
-
-  furnitureBoxes=[];
-  const openCells=[];
-  for(let gz=2;gz<MS-2;gz++) for(let gx=2;gx<MS-2;gx++){
-    if(!grid[gz][gx] && !inSafeRoom(gx,gz)){
-      const d=Math.abs(gx-1)+Math.abs(gz-1);
-      if(d>4) openCells.push([gx,gz]);
-    }
-  }
-  shuffle(openCells);
-  // solidCells = كل خلية مش ممر مستقيم (طريق مسدود، زاوية، أو تقاطع)
-  const solidCells=openCells.filter(([gx,gz])=>{
-    const L=inBounds(gx-1,gz)&&grid[gz][gx-1]===0;
-    const R=inBounds(gx+1,gz)&&grid[gz][gx+1]===0;
-    const U=inBounds(gx,gz-1)&&grid[gz-1][gx]===0;
-    const D=inBounds(gx,gz+1)&&grid[gz+1][gx]===0;
-    return !((L&&R&&!U&&!D)||(!L&&!R&&U&&D));
-  });
-
-  let sP=0; // solidCells pointer — مشترك بين كل الأثاث
-  // ── Desks ──
-  for(let i=0;i<10&&sP<solidCells.length;i++,sP++){
-    const [gx,gz]=solidCells[sP];
-    const {x:wx,z:wz}=g2w(gx,gz);
-    const desk=new THREE.Group();
-    // Tabletop
-    const top=new THREE.Mesh(new THREE.BoxGeometry(1.4,.06,.7),woodMat);
-    top.position.y=0.88; desk.add(top);
-    // Legs
-    for(const[lx,lz] of[[-0.6,0.3],[0.6,0.3],[-0.6,-0.3],[0.6,-0.3]]){
-      const leg=new THREE.Mesh(new THREE.BoxGeometry(.06,.88,.06),darkWoodMat);
-      leg.position.set(lx,.44,lz); desk.add(leg);
-    }
-    // Paper on desk
-    if(Math.random()>.4){
-      const paper=new THREE.Mesh(new THREE.PlaneGeometry(.35,.45),paperMat);
-      paper.rotation.x=-Math.PI/2; paper.position.set((Math.random()-.5)*.5,.92,(Math.random()-.5)*.2);
-      desk.add(paper);
-    }
-    // Metal lamp sometimes
-    if(Math.random()>.6){
-      const lampBase=new THREE.Mesh(new THREE.CylinderGeometry(.04,.07,.06,8),metalMat);
-      lampBase.position.set(.4,.91,.1); desk.add(lampBase);
-      const lampPole=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.38,6),metalMat);
-      lampPole.position.set(.4,1.1,.1); desk.add(lampPole);
-      const shade=new THREE.Mesh(new THREE.ConeGeometry(.12,.14,8,1,true),new THREE.MeshLambertMaterial({color:0x2a2010,emissive:0x060500,side:THREE.DoubleSide}));
-      shade.position.set(.4,1.32,.1); desk.add(shade);
-    }
-    desk.rotation.y=Math.floor(Math.random()*4)*Math.PI/2;
-    desk.position.set(wx,0,wz);
-    scene.add(desk);
-    addFurBox(wx,wz,0.75,0.4);
-  }
-
-  // ── Blackboards / Notice boards ──
-  for(let i=0;i<6&&sP<solidCells.length;i++,sP++){
-    const [gx,gz]=solidCells[sP];
-    const {x:wx,z:wz}=g2w(gx,gz);
-    const angle=Math.floor(Math.random()*4)*Math.PI/2;
-    const side=CS/2-.1;
-    const bx=wx+Math.sin(angle)*side, bz=wz+Math.cos(angle)*side;
-    const board=new THREE.Mesh(new THREE.BoxGeometry(1.4,.04,.9),boardMat);
-    board.rotation.set(0,angle+Math.PI/2,0);
-    board.position.set(bx,2.2,bz);
-    scene.add(board);
-    // Frame
-    const frameM=new THREE.MeshLambertMaterial({color:0x2a1d0e,emissive:0x060401});
-    for(const[fw,fh,fx,fy,fz,frx,fry] of [
-      [1.44,.06,.06, 0,2.65,bx,2.65,bz, 0,angle+Math.PI/2,0],
-      [1.44,.06,.06, 0,1.75,bx,1.75,bz, 0,angle+Math.PI/2,0],
-    ]){
-      const fr=new THREE.Mesh(new THREE.BoxGeometry(fw,fh,.06),frameM);
-      fr.position.set(bx,fy,bz); fr.rotation.y=angle+Math.PI/2; scene.add(fr);
-    }
-    // Chalk writing texture
-    const cc=document.createElement('canvas'); cc.width=256; cc.height=160;
-    const cctx=cc.getContext('2d');
-    cctx.fillStyle='#0a1a0a'; cctx.fillRect(0,0,256,160);
-    cctx.font='18px monospace'; cctx.fillStyle='rgba(200,200,180,.6)';
-    const msgs=['⚠ لا تنظر!','البقاء هنا محظور','اهرب قبل الغروب','هو يراقبك','لا مخرج','إياك أن تبتعد'];
-    cctx.textAlign='center';
-    cctx.fillText(msgs[i%msgs.length],128,90);
-    const boardSurface=new THREE.Mesh(new THREE.PlaneGeometry(1.35,.86),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cc),transparent:true,side:THREE.DoubleSide}));
-    boardSurface.rotation.y=angle+Math.PI/2;
-    boardSurface.position.set(bx+Math.sin(angle+Math.PI/2)*.03,2.2,bz+Math.cos(angle+Math.PI/2)*.03);
-    scene.add(boardSurface);
-  }
-
-  // ── Filing cabinets ──
-  for(let i=0;i<5&&sP<solidCells.length;i++,sP++){
-    const [gx,gz]=solidCells[sP];
-    const {x:wx,z:wz}=g2w(gx,gz);
-    const cab=new THREE.Group();
-    const body=new THREE.Mesh(new THREE.BoxGeometry(.55,1.2,.45),metalMat);
-    body.position.y=0.6; cab.add(body);
-    for(let d=0;d<3;d++){
-      const drawer=new THREE.Mesh(new THREE.BoxGeometry(.5,.3,.02),new THREE.MeshLambertMaterial({color:0x252525,emissive:0x060606}));
-      drawer.position.set(0,.3+d*.36,.24); cab.add(drawer);
-      const handle=new THREE.Mesh(new THREE.BoxGeometry(.14,.03,.03),new THREE.MeshLambertMaterial({color:0x555555,emissive:0x0a0a0a}));
-      handle.position.set(0,.3+d*.36,.26); cab.add(handle);
-    }
-    cab.rotation.y=Math.random()*Math.PI*2;
-    cab.position.set(wx,0,wz);
-    scene.add(cab);
-    addFurBox(wx,wz,0.35,0.35);
-  }
-
-  // ── Overturned chairs ──
-  for(let i=0;i<7&&sP<solidCells.length;i++,sP++){
-    const [gx,gz]=solidCells[sP];
-    const {x:wx,z:wz}=g2w(gx,gz);
-    // ادفع الكرسي ناحية أقرب جدار بدل ما يكون في النص
-    const L=inBounds(gx-1,gz)&&grid[gz][gx-1]===1;
-    const R=inBounds(gx+1,gz)&&grid[gz][gx+1]===1;
-    const U=inBounds(gx,gz-1)&&grid[gz-1][gx]===1;
-    const D=inBounds(gx,gz+1)&&grid[gz+1][gx]===1;
-    const wallOffset=1.2;
-    const ox=L?-wallOffset:R?wallOffset:0;
-    const oz=U?-wallOffset:D?wallOffset:0;
-    const cx=wx+ox, cz=wz+oz;
-    const chair=new THREE.Group();
-    const seat=new THREE.Mesh(new THREE.BoxGeometry(.44,.05,.44),woodMat);
-    chair.add(seat);
-    const back=new THREE.Mesh(new THREE.BoxGeometry(.44,.54,.04),woodMat);
-    back.position.set(0,.3,-.2); chair.add(back);
-    for(const [lx,lz] of [[-0.18,.18],[.18,.18],[-.18,-.18],[.18,-.18]]){
-      const leg=new THREE.Mesh(new THREE.BoxGeometry(.04,.46,.04),darkWoodMat);
-      leg.position.set(lx,-.23,lz); chair.add(leg);
-    }
-    chair.rotation.set((Math.random()-.5)*1.4,Math.random()*Math.PI*2,(Math.random()-.5)*1.4);
-    chair.position.set(cx,.35+Math.random()*.2,cz);
-    scene.add(chair);
-    addFurBox(cx,cz,0.3,0.3);
-  }
-
-  // ── Floor debris (scattered papers) — أوراق على الأرض، بدون collision ──
-  let pP=0;
-  for(let i=0;i<14&&pP<openCells.length;i++,pP++){
-    const [gx,gz]=openCells[pP];
-    const {x:wx,z:wz}=g2w(gx,gz);
-    const paper=new THREE.Mesh(new THREE.PlaneGeometry(.28+Math.random()*.2,.36+Math.random()*.2),paperMat);
-    paper.rotation.set(-Math.PI/2+(Math.random()-.5)*.25,Math.random()*Math.PI*2,0);
-    paper.position.set(wx+(Math.random()-.5)*1.5,.015,wz+(Math.random()-.5)*1.5);
-    scene.add(paper);
-  }
-}
-
 // ══ BUILD SCENE ══
 function buildScene(){
   // ── In multiplayer, seed from host so ALL players get identical maze + items ──
@@ -1782,7 +1624,7 @@ function buildScene(){
   shackle.rotation.x=Math.PI/2;shackle.position.set(eWX,1.43,eWZ-CS*0.44);doorGroup.add(shackle);
   scene.add(doorGroup);
 
-  buildMonster();buildStatue();buildMinimap();buildKeys();buildBatteries();buildSafeRoom();buildSafeRoomDoor();buildGreenKey();unlockExitState();buildMazeFurniture();
+  buildMonster();buildStatue();buildMinimap();buildKeys();buildBatteries();buildSafeRoom();buildSafeRoomDoor();buildGreenKey();unlockExitState();
 }
 
 // ══ MONSTER ══
@@ -2790,8 +2632,8 @@ function movePlayer(lx,lz,dt){
   const cy=Math.cos(yaw),sy=Math.sin(yaw);
   const wx=lx*cy+lz*sy,wz=-lx*sy+lz*cy;
   const M2=0.32,nx=pPos.x+wx*spd,nz=pPos.z+wz*spd;
-  if(!isWall(nx+M2,pPos.z+M2)&&!isWall(nx+M2,pPos.z-M2)&&!isWall(nx-M2,pPos.z+M2)&&!isWall(nx-M2,pPos.z-M2)&&!isDoorBlocked(nx,pPos.z)&&!isFurnitureBlocked(nx,pPos.z))pPos.x=nx;
-  if(!isWall(pPos.x+M2,nz+M2)&&!isWall(pPos.x+M2,nz-M2)&&!isWall(pPos.x-M2,nz+M2)&&!isWall(pPos.x-M2,nz-M2)&&!isDoorBlocked(pPos.x,nz)&&!isFurnitureBlocked(pPos.x,nz))pPos.z=nz;
+  if(!isWall(nx+M2,pPos.z+M2)&&!isWall(nx+M2,pPos.z-M2)&&!isWall(nx-M2,pPos.z+M2)&&!isWall(nx-M2,pPos.z-M2)&&!isDoorBlocked(nx,pPos.z))pPos.x=nx;
+  if(!isWall(pPos.x+M2,nz+M2)&&!isWall(pPos.x+M2,nz-M2)&&!isWall(pPos.x-M2,nz+M2)&&!isWall(pPos.x-M2,nz-M2)&&!isDoorBlocked(pPos.x,nz))pPos.z=nz;
 }
 
 let gameElapsed=0;
