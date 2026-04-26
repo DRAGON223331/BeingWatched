@@ -512,84 +512,62 @@ canvas{
 .mobBtn.active{background:rgba(255,255,255,.28);transform:scale(.93);}
 
 #mobileSprintBtn{
-  bottom:155px;left:20px;
-  width:68px;height:68px;
+  bottom:14px; left:122px;
+  width:64px; height:64px;
   border-color:rgba(255,200,80,.45);
 }
 #mobileSprintBtn.active{background:rgba(255,200,80,.25);}
 
 #mobileInteractBtn{
-  bottom:155px;left:104px;
-  width:62px;height:62px;
+  bottom:90px; left:122px;
+  width:58px; height:58px;
   border-color:rgba(80,255,140,.4);
 }
 #mobileInteractBtn.active{background:rgba(80,255,140,.2);}
 
 #mobileBackpackBtn{
-  bottom:155px;left:182px;
-  width:62px;height:62px;
+  bottom:90px; left:188px;
+  width:58px; height:58px;
   border-color:rgba(180,140,255,.4);
 }
 
 /* ══ MOBILE RESPONSIVE SCALING ══ */
-@media(max-width:480px){
-  /* ── Start screen fits without scrolling ── */
-  #startScreen h1{font-size:2.2em!important;margin-bottom:6px!important}
-  .tagline{font-size:.88em!important;margin:4px 0!important}
-  .rules{font-size:.82em!important;margin:10px 0!important;padding:10px 12px!important;line-height:1.7!important;max-width:90vw!important}
-  .ctrlBox{font-size:.72em!important;margin:6px 0!important;max-width:90vw!important;line-height:1.6!important}
-  #menuButtons{margin-top:12px!important;gap:8px!important}
-  .menuBtn{padding:11px 14px!important;font-size:.92em!important;width:min(240px,80vw)!important}
+@media(max-width:520px){
 
-  /* Minimap */
-  #minimap{width:115px!important;height:115px!important;top:40px!important}
-  #mapTitle{width:115px!important;font-size:.8em!important;top:12px!important}
-
-  /* Objective panel — narrower so buttons don't overlap */
-  #objectivePanel{
-    font-size:.75em!important;
-    width:min(170px,38vw)!important;
-    line-height:1.5!important;
-    top:14px!important;
-    right:10px!important;
+  /* ── Start screen — no scroll ── */
+  #startScreen{ padding:10px 6px!important; justify-content:center!important; }
+  #startScreen h1{ font-size:1.85em!important; margin-bottom:4px!important; letter-spacing:1px!important; }
+  .tagline{ font-size:.8em!important; margin:3px 0!important; }
+  .rules{
+    font-size:.76em!important; margin:8px 0!important;
+    padding:8px 10px!important; line-height:1.55!important;
+    max-width:90vw!important;
   }
-  #objectivePanel .title{font-size:1.1em!important;margin-bottom:4px!important}
-  #objectivePanel .count{font-size:1.2em!important}
-  #objectivePanel .objectiveKeys{margin-top:10px!important}
+  .ctrlBox{ display:none!important; }
+  #menuButtons{ margin-top:8px!important; gap:7px!important; }
+  .menuBtn{ padding:10px 10px!important; font-size:.86em!important; width:min(220px,76vw)!important; }
 
-  /* Battery HUD */
-  #batteryHUD{bottom:10px!important;right:10px!important}
-  .batCell{width:24px!important;height:10px!important}
-  .batLabel{font-size:.7em!important}
+  /* ── Battery cells ── */
+  .batCell{ width:22px!important; height:10px!important; }
+  .batLabel{ font-size:.68em!important; }
 
-  /* Stamina bar */
-  #staminaBox{
-    width:min(160px,48vw)!important;
-    height:11px!important;
-    bottom:10px!important;
-    left:50%!important;
-    transform:translateX(-50%)!important;
-  }
-  #staminaLabel{bottom:44px!important;font-size:.82em!important}
+  /* ── Prompts ── */
+  #interactPrompt{ font-size:.82em!important; bottom:78px!important; }
+  #monsterAlert{ font-size:.78em!important; bottom:80px!important; }
+  #toastMessage{ font-size:.82em!important; min-width:min(230px,74vw)!important; top:12px!important; }
+  #clickPrompt{ display:none!important; }
 
-  /* Interact / alert prompts */
-  #interactPrompt{font-size:.85em!important;bottom:82px!important}
-  #monsterAlert{font-size:.8em!important;bottom:86px!important}
+  /* ── Joystick ── */
+  #joyZone{ width:100px!important; height:100px!important; bottom:14px!important; left:14px!important; }
+  #joyThumb{ width:38px!important; height:38px!important; }
 
-  /* Toast */
-  #toastMessage{font-size:.85em!important;min-width:min(250px,76vw)!important}
+  /* ── Flashlight button ── */
+  #flBtn{ width:58px!important; height:58px!important; font-size:1.3em!important; bottom:14px!important; right:14px!important; }
 
-  /* Joystick */
-  #joyZone{width:110px!important;height:110px!important;bottom:18px!important;left:18px!important}
-  #joyThumb{width:40px!important;height:40px!important}
-
-  /* Flashlight button */
-  #flBtn{width:62px!important;height:62px!important;font-size:1.4em!important;bottom:18px!important;right:18px!important}
-
-  /* Mobile action buttons — above joystick, left side */
-  #mobileSprintBtn{width:58px!important;height:58px!important;bottom:148px!important;left:18px!important;right:auto!important}
-  #mobileInteractBtn{width:54px!important;height:54px!important;bottom:150px!important;left:90px!important;right:auto!important}
-  #mobileBackpackBtn{width:54px!important;height:54px!important;bottom:150px!important;left:158px!important;right:auto!important}
+  /* ── Mobile action buttons ── */
+  #mobileSprintBtn{ width:58px!important; height:58px!important; bottom:14px!important; left:122px!important; right:auto!important; }
+  #mobileInteractBtn{ width:52px!important; height:52px!important; bottom:84px!important; left:122px!important; right:auto!important; }
+  #mobileBackpackBtn{ width:52px!important; height:52px!important; bottom:84px!important; left:182px!important; right:auto!important; }
 }
 
 </style>
@@ -2041,7 +2019,9 @@ function buildPlayerBody(){
 let mmCtx;
 function buildMinimap(){
   const mc=document.getElementById('minimap');
-  mc.width=170;mc.height=170;
+  const mmSize=isMobile()?115:170;
+  mc.width=mmSize;mc.height=mmSize;
+  mc.style.width=mmSize+'px';mc.style.height=mmSize+'px';
   mmCtx=mc.getContext('2d');
 }
 function drawMinimap(elapsed=gameElapsed){
@@ -3155,7 +3135,7 @@ function gameLoop(ts){
   document.getElementById('timerBox').textContent=`⏱ ${Math.floor(elapsed)}ث`;
   document.getElementById('keyBox').textContent=`🔑 ${keysCollected}/${KEY_TARGET}`;
   drawMinimap(gameElapsed);
-  document.getElementById('clickPrompt').style.display=locked?'none':'block';
+  document.getElementById('clickPrompt').style.display=(locked||isMobile())?'none':'block';
   for(const k of keyItems){ if(!k.collected && k.mesh.userData.animate){ k.mesh.userData.animate(elapsed); }}
   // Multiplayer: sync position & update other player meshes
   if(MP.enabled){ mpSendPosition(dt); mpUpdatePlayerMeshes(); voiceUpdateProximity(); }
@@ -3280,12 +3260,6 @@ function startGame(){
   document.getElementById('settingsScreen').style.display='none';
   document.getElementById('startScreen').style.display='none';
   document.getElementById('objectivePanel').style.display='block';
-  document.getElementById('objectivePanel').style.right='18px';
-  document.getElementById('objectivePanel').style.left='auto';
-  document.getElementById('mapTitle').style.left='18px';
-  document.getElementById('mapTitle').style.right='auto';
-  document.getElementById('minimap').style.left='18px';
-  document.getElementById('minimap').style.right='auto';
   document.getElementById('mapTitle').style.display='block';
   document.getElementById('crosshair').style.display='block';
   document.getElementById('minimap').style.display='block';
@@ -3299,6 +3273,32 @@ function startGame(){
   }
 
   if(isMobile()){
+    // ── HUD positions for mobile ──
+    const mm=document.getElementById('minimap');
+    mm.style.left='14px'; mm.style.right='auto';
+    mm.style.top='42px';
+
+    const mt=document.getElementById('mapTitle');
+    mt.style.left='14px'; mt.style.right='auto';
+    mt.style.width='115px'; mt.style.top='12px';
+
+    const op=document.getElementById('objectivePanel');
+    op.style.right='8px'; op.style.left='auto';
+    op.style.top='14px'; op.style.width='min(160px,36vw)';
+    op.style.fontSize='.7em'; op.style.lineHeight='1.45';
+
+    const sb=document.getElementById('staminaBox');
+    sb.style.width='min(140px,40vw)'; sb.style.height='10px'; sb.style.bottom='8px';
+
+    const sl=document.getElementById('staminaLabel');
+    sl.style.bottom='40px'; sl.style.fontSize='.8em';
+
+    const bh=document.getElementById('batteryHUD');
+    bh.style.bottom='8px'; bh.style.right='8px';
+
+    // Hide click prompt — not relevant on touch
+    document.getElementById('clickPrompt').style.display='none';
+
     document.getElementById('joyZone').style.display='block';
     document.getElementById('flBtn').style.display='flex';
     document.getElementById('crosshair').style.display='none';
@@ -3307,6 +3307,12 @@ function startGame(){
     document.getElementById('mobileBackpackBtn').style.display='flex';
     _touchControlsVisible=true;
   } else {
+    document.getElementById('objectivePanel').style.right='18px';
+    document.getElementById('objectivePanel').style.left='auto';
+    document.getElementById('mapTitle').style.left='18px';
+    document.getElementById('mapTitle').style.right='auto';
+    document.getElementById('minimap').style.left='18px';
+    document.getElementById('minimap').style.right='auto';
     document.getElementById('joyZone').style.display='none';
     document.getElementById('flBtn').style.display='none';
     document.getElementById('mobileSprintBtn').style.display='none';
