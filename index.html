@@ -1218,8 +1218,24 @@ canvas{
 
 // ══ STORY ══
 (function(){
+  // ── Play count tracking ──
+  const playCount = parseInt(localStorage.getItem('muraaqib_plays')||'0');
+  const isReturn  = playCount >= 3;
+
   // ── Story pages ──
-  const pages = [
+  const pages = isReturn ? [
+    {
+      chapter: '... مرة أخرى؟',
+      blocks: [
+        { text: 'عرفنا أنك ستعود.', type:'highlight' },
+        { sep: true },
+        { text: 'المتاهة تذكرك. الوحش يتذكرك.', type:'normal' },
+        { text: 'إيه اللي بيرجعك هنا؟', type:'highlight' },
+        { sep: true },
+        { text: 'هذه المرة... لن تكون بنفس السهولة.', type:'dim' },
+      ]
+    },
+  ] : [
     {
       chapter: 'ملف سري — رقم ٠٠٧',
       blocks: [
@@ -1248,7 +1264,7 @@ canvas{
         { text: 'اجمع المفاتيح. ابحث عن المخرج الأخضر.\nولا تدع الوحش يلمسك — أبداً.', type:'highlight' },
       ]
     },
-  ];
+  ]; // end non-return pages
 
   let currentPage = 0;
   let blockIndex   = 0;
@@ -1350,6 +1366,7 @@ canvas{
   }
 
   function closeStory(){
+    localStorage.setItem('muraaqib_plays', playCount + 1);
     const so = document.getElementById('storyOverlay');
     so.classList.add('fade-out');
     setTimeout(()=>{
@@ -3538,7 +3555,7 @@ function gameLoop(ts){
   document.getElementById('clickPrompt').style.display=(locked||isMobile())?'none':'block';
   for(const k of keyItems){ if(!k.collected && k.mesh.userData.animate){ k.mesh.userData.animate(elapsed); }}
   // Multiplayer: sync position & update other player meshes
-  if(MP.enabled){ mpSendPosition(dt); mpUpdatePlayerMeshes(); voiceUpdateProximity(); }
+  if(MP.enabled){ mpSendPosition(dt); mpUpdatePlayerMeshes(); voiceUpdateProximity(); mpUpdateGhosts(elapsed); }
   renderer.render(scene,cam);
 }
 
@@ -3573,7 +3590,72 @@ function winGame(){
   hideHUD();
 }
 
-// ══ TOUCH STATE ══
+// ══ GHOST SYSTEM ══
+const _ghosts = {}; // pid → {mesh, x, z, name, warned}
+
+function mpSpawnGhost(pid){
+  if(!scene||!MP.players[pid]) return;
+  const p = MP.players[pid];
+  // Hide original mesh
+  if(p.mesh){ p.mesh.visible = false; }
+
+  const g = new THREE.Group();
+
+  // Translucent body
+  const ghostMat = new THREE.MeshLambertMaterial({color:0x88aaff, transparent:true, opacity:0.28, side:THREE.DoubleSide});
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,1.3,8), ghostMat);
+  body.position.y = 0.65; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.2,8,6), ghostMat);
+  head.position.y = 1.5; g.add(head);
+
+  // Glow light
+  const glow = new THREE.PointLight(0x4466ff, 1.0, 4.5);
+  glow.position.y = 1.0; g.add(glow);
+
+  // Warning label canvas
+  const nc = document.createElement('canvas'); nc.width=256; nc.height=56;
+  const nctx = nc.getContext('2d');
+  nctx.clearRect(0,0,256,56);
+  nctx.font='bold 20px Tahoma'; nctx.textAlign='center';
+  nctx.strokeStyle='rgba(0,0,0,.9)'; nctx.lineWidth=4;
+  nctx.strokeText('⚠ ' + (p.name||'لاعب'), 128, 36);
+  nctx.fillStyle='#aaccff';
+  nctx.fillText('⚠ ' + (p.name||'لاعب'), 128, 36);
+  const labelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.1,.28),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc),transparent:true,side:THREE.DoubleSide,depthWrite:false})
+  );
+  labelMesh.position.y = 2.1; labelMesh.name='ghostLabel'; g.add(labelMesh);
+
+  g.position.set(p.x||0, 0.18, p.z||0);
+  g.name = 'ghost_'+pid;
+  scene.add(g);
+  _ghosts[pid] = { mesh:g, x:p.x||0, z:p.z||0, name:p.name||'لاعب', warned:false };
+}
+
+function mpUpdateGhosts(elapsed){
+  if(!cam) return;
+  Object.entries(_ghosts).forEach(([pid, gh])=>{
+    if(!gh.mesh) return;
+    // Floating animation
+    gh.mesh.position.y = 0.18 + Math.sin(elapsed*1.8 + pid.charCodeAt(0))*0.12;
+    // Label always faces camera
+    const lbl = gh.mesh.getObjectByName('ghostLabel');
+    if(lbl && cam) lbl.quaternion.copy(cam.quaternion);
+    // Proximity warning
+    const dx = pPos.x - gh.x, dz = pPos.z - gh.z;
+    const dist = Math.sqrt(dx*dx+dz*dz);
+    if(dist < 3.5 && !gh.warned){
+      gh.warned = true;
+      showToast(`👻 شبح ${gh.name}: ⚠ الوحش قريب من هنا!`, 3500);
+      tone(300,180,.4,'sine',.12);
+      tone(200,100,.3,'sine',.08,.15);
+      setTimeout(()=>{ gh.warned = false; }, 12000);
+    }
+  });
+}
+
+// Update ghost calls in game loop
 let mouseDown=false,lastMX=0,lastMY=0;
 let joyTouchId=null,joyBaseX=0,joyBaseY=0;
 let lookTouchId=null,lookLastX=0,lookLastY=0;
@@ -3653,6 +3735,51 @@ function startSolo(){
 function showMainMenu(){
   document.getElementById('mpMenuScreen').style.display='none';
   document.getElementById('startScreen').style.display='flex';
+}
+
+// ══ WALL MESSAGES ══
+function buildWallMessages(name){
+  if(!scene||!grid)return;
+  const msgs=[
+    `أهرب يا ${name}`,
+    `${name}... لا تنظر`,
+    `الخروج وهم يا ${name}`,
+    `يراقبك يا ${name}`,
+    `لا مفر يا ${name}`,
+  ];
+  // Pick 4 random open wall-adjacent cells
+  const candidates=[];
+  for(let gz=2;gz<MS-2;gz++){
+    for(let gx=2;gx<MS-2;gx++){
+      if(grid[gz][gx]===0){
+        // Check if there's a wall on the +Z side
+        if(grid[gz+1] && grid[gz+1][gx]===1) candidates.push({gx,gz,face:'z'});
+        if(grid[gz-1] && grid[gz-1][gx]===1) candidates.push({gx,gz,face:'nz'});
+        if(grid[gz][gx+1]===1) candidates.push({gx,gz,face:'x'});
+        if(grid[gz][gx-1]===1) candidates.push({gx,gz,face:'nx'});
+      }
+    }
+  }
+  shuffle(candidates);
+  const chosen=candidates.slice(0,msgs.length);
+  chosen.forEach(({gx,gz,face},i)=>{
+    const c=document.createElement('canvas'); c.width=256; c.height=64;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='rgba(0,0,0,0)'; ctx.fillRect(0,0,256,64);
+    ctx.font='bold 28px Tahoma'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(160,20,20,.82)';
+    ctx.fillText(msgs[i],128,42);
+    const mat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,side:THREE.DoubleSide,depthWrite:false});
+    const plane=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.55),mat);
+    const wx=gx*CS+CS/2, wz=gz*CS+CS/2;
+    plane.position.y=1.55;
+    if(face==='z'){  plane.position.set(wx,1.55,wz+CS/2-.1); plane.rotation.y=0; }
+    else if(face==='nz'){ plane.position.set(wx,1.55,wz-CS/2+.1); plane.rotation.y=Math.PI; }
+    else if(face==='x'){  plane.position.set(wx+CS/2-.1,1.55,wz); plane.rotation.y=-Math.PI/2; }
+    else { plane.position.set(wx-CS/2+.1,1.55,wz); plane.rotation.y=Math.PI/2; }
+    plane.name='wallMsg';
+    scene.add(plane);
+  });
 }
 
 // ══ START ══
@@ -3767,6 +3894,11 @@ function startGame(){
   _initDynamicInputDetection();
 
   initAudio();buildScene();
+
+  // ── Save name + spawn wall messages ──
+  const _savedName = (document.getElementById('mpNameInput')?.value?.trim()) || localStorage.getItem('muraaqib_name') || 'أيها الغريب';
+  localStorage.setItem('muraaqib_name', _savedName);
+  buildWallMessages(_savedName);
   bindSettingsControls();
   applySettingsUI();
   startBackgroundMusic();
@@ -4071,6 +4203,7 @@ function mpHandlePlayerMsg(pid,data){
     case 'died':
       if(MP.players[pid]) MP.players[pid].dead=true;
       mpBroadcast({ type:'died', peerId:pid });
+      mpSpawnGhost(pid);
       break;
     case 'won':
       if(MP.players[pid]) MP.players[pid].won=true;
@@ -4133,7 +4266,10 @@ function mpHandleHostMsg(data){
       mpBeginGame();
       break;
     case 'died':
-      if(MP.players[data.peerId]){ MP.players[data.peerId].dead=true; if(MP.players[data.peerId].mesh) MP.players[data.peerId].mesh.visible=false; }
+      if(MP.players[data.peerId]){
+        MP.players[data.peerId].dead=true;
+        mpSpawnGhost(data.peerId);
+      }
       showToast('💀 '+(MP.players[data.peerId]?.name||'لاعب')+' مات!');
       break;
     case 'won':
